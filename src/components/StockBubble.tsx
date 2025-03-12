@@ -66,7 +66,4 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
   );
 };
 
-// Add framer-motion as a dependency
-<lov-add-dependency>framer-motion@latest</lov-add-dependency>
-
 export default StockBubble;
