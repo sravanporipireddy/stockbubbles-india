@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { IndianRupee, TrendingUp, TrendingDown } from 'lucide-react';
@@ -54,23 +55,23 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
       whileHover={{ scale: 1.1, zIndex: 10 }}
     >
       <motion.div 
-        className={`absolute inset-0 rounded-full shadow-subtle flex flex-col items-center justify-center overflow-hidden ${bubbleColor}`}
+        className={`absolute inset-0 rounded-full shadow-subtle flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-2`}
         animate={{ 
           boxShadow: isHovering 
             ? '0 0 0 2px rgba(255,255,255,0.8), 0 8px 20px rgba(0,0,0,0.2)' 
             : '0 4px 8px rgba(0,0,0,0.1)'
         }}
       >
-        <span className="font-bold text-white text-center px-1 text-sm sm:text-base">
+        <span className="font-bold text-white text-center px-1 text-sm sm:text-base truncate w-full">
           {stock.symbol}
         </span>
         
-        <div className="flex items-center justify-center space-x-1 text-white font-semibold">
+        <div className="flex items-center justify-center gap-0.5 text-white font-semibold mt-0.5">
           <IndianRupee size={12} />
           <span className="text-xs">{formatPrice(stock.price)}</span>
         </div>
         
-        <div className={`flex items-center mt-1 text-xs font-medium text-white`}>
+        <div className="flex items-center justify-center mt-1 text-xs font-medium text-white">
           {isPositive ? (
             <TrendingUp size={10} className="mr-0.5" />
           ) : (
