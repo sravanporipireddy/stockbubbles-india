@@ -23,13 +23,33 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
   const bubbleColor = getBubbleColor(stock.changePercent);
   const isPositive = stock.changePercent > 0;
   
+  // Create random but deterministic animation values based on stock id
+  // to ensure each bubble moves differently but consistently
+  const randomSeed = parseInt(stock.id.substring(0, 8), 16);
+  const floatDuration = 3 + (randomSeed % 4); // 3-6 seconds
+  const floatY = 10 + (randomSeed % 15); // 10-24px movement
+  const delayOffset = (randomSeed % 10) / 10; // 0-0.9 second delay
+  
   return (
     <motion.div
       className="relative cursor-pointer"
       initial={{ scale: 0, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
+      animate={{ 
+        scale: 1, 
+        opacity: 1,
+        y: [0, -floatY, 0],
+      }}
+      transition={{ 
+        scale: { type: 'spring', stiffness: 300, damping: 20 },
+        opacity: { duration: 0.5 },
+        y: { 
+          repeat: Infinity, 
+          duration: floatDuration, 
+          ease: "easeInOut",
+          delay: delayOffset
+        }
+      }}
       exit={{ scale: 0, opacity: 0 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       style={{ width: bubbleSize, height: bubbleSize }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
@@ -67,3 +87,4 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
 };
 
 export default StockBubble;
+
