@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { IndianRupee, TrendingUp, TrendingDown } from 'lucide-react';
@@ -23,8 +22,6 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
   const bubbleColor = getBubbleColor(stock.changePercent);
   const isPositive = stock.changePercent > 0;
   
-  // Create random but deterministic animation values based on stock id
-  // to ensure each bubble moves differently but consistently
   const randomSeed = parseInt(stock.id.substring(0, 8), 16);
   const floatDuration = 3 + (randomSeed % 4); // 3-6 seconds
   const floatY = 10 + (randomSeed % 15); // 10-24px movement
@@ -57,7 +54,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
       whileHover={{ scale: 1.1, zIndex: 10 }}
     >
       <motion.div 
-        className={`absolute inset-0 rounded-full shadow-subtle flex flex-col items-center justify-center overflow-hidden bg-${bubbleColor}`}
+        className={`absolute inset-0 rounded-full shadow-subtle flex flex-col items-center justify-center overflow-hidden ${bubbleColor}`}
         animate={{ 
           boxShadow: isHovering 
             ? '0 0 0 2px rgba(255,255,255,0.8), 0 8px 20px rgba(0,0,0,0.2)' 
@@ -73,7 +70,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
           <span className="text-xs">{formatPrice(stock.price)}</span>
         </div>
         
-        <div className={`flex items-center mt-1 text-xs font-medium ${isPositive ? 'text-white' : 'text-white'}`}>
+        <div className={`flex items-center mt-1 text-xs font-medium text-white`}>
           {isPositive ? (
             <TrendingUp size={10} className="mr-0.5" />
           ) : (
@@ -87,4 +84,3 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
 };
 
 export default StockBubble;
-

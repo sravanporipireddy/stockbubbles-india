@@ -1,4 +1,3 @@
-
 import { Stock } from './mockData';
 
 // Function to format large numbers with commas and abbreviations
@@ -33,12 +32,12 @@ export const formatPrice = (price: number): string => {
 
 // Function to determine bubble color based on performance
 export const getBubbleColor = (changePercent: number): string => {
-  if (changePercent > 4) return 'bubble-green-3';
-  if (changePercent > 2) return 'bubble-green-2';
-  if (changePercent > 0) return 'bubble-green-1';
-  if (changePercent > -2) return 'bubble-red-1';
-  if (changePercent > -4) return 'bubble-red-2';
-  return 'bubble-red-3';
+  if (changePercent > 4) return 'bg-green-600';
+  if (changePercent > 2) return 'bg-green-500';
+  if (changePercent > 0) return 'bg-green-400';
+  if (changePercent > -2) return 'bg-red-400';
+  if (changePercent > -4) return 'bg-red-500';
+  return 'bg-red-600';
 };
 
 // Function to determine bubble size based on market cap
