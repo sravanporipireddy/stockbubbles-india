@@ -1,4 +1,3 @@
-
 export interface Stock {
   id: string;
   symbol: string;
@@ -123,16 +122,18 @@ export const updateStockPrices = (stocks: Stock[]): Stock[] => {
 };
 
 // Generate sector data
-export const getSectorPerformance = (stocks: Stock[]): { name: string, changePercent: number }[] => {
+export const getSectorPerformance = (stocks: Stock[]): { name: string, changePercent: number, marketCap: number }[] => {
   const sectors = [...new Set(stocks.map(stock => stock.sector))];
   
   return sectors.map(sector => {
     const sectorStocks = stocks.filter(stock => stock.sector === sector);
     const avgChangePercent = sectorStocks.reduce((sum, stock) => sum + stock.changePercent, 0) / sectorStocks.length;
+    const totalMarketCap = sectorStocks.reduce((sum, stock) => sum + stock.marketCap, 0);
     
     return {
       name: sector,
-      changePercent: parseFloat(avgChangePercent.toFixed(2))
+      changePercent: parseFloat(avgChangePercent.toFixed(2)),
+      marketCap: totalMarketCap
     };
   });
 };
