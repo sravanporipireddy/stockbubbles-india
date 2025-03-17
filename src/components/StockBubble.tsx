@@ -55,27 +55,27 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
       whileHover={{ scale: 1.1, zIndex: 10 }}
     >
       <motion.div 
-        className={`absolute inset-0 rounded-full shadow-subtle flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-2`}
+        className={`absolute inset-0 rounded-full shadow-subtle flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-4`}
         animate={{ 
           boxShadow: isHovering 
             ? '0 0 0 2px rgba(255,255,255,0.8), 0 8px 20px rgba(0,0,0,0.2)' 
             : '0 4px 8px rgba(0,0,0,0.1)'
         }}
       >
-        <span className="font-bold text-white text-center px-1 text-sm sm:text-base truncate w-full">
+        <span className="font-bold text-white text-center px-1 text-base sm:text-lg md:text-xl truncate w-full">
           {stock.symbol}
         </span>
         
-        <div className="flex items-center justify-center gap-0.5 text-white font-semibold mt-0.5">
-          <IndianRupee size={12} />
-          <span className="text-xs">{formatPrice(stock.price)}</span>
+        <div className="flex items-center justify-center gap-1 text-white font-semibold mt-2">
+          <IndianRupee size={16} />
+          <span className="text-sm sm:text-base">{formatPrice(stock.price)}</span>
         </div>
         
-        <div className="flex items-center justify-center mt-1 text-xs font-medium text-white">
+        <div className="flex items-center justify-center mt-2 text-sm font-medium text-white">
           {isPositive ? (
-            <TrendingUp size={10} className="mr-0.5" />
+            <TrendingUp size={14} className="mr-1" />
           ) : (
-            <TrendingDown size={10} className="mr-0.5" />
+            <TrendingDown size={14} className="mr-1" />
           )}
           <span>{formatPercentage(stock.changePercent)}</span>
         </div>

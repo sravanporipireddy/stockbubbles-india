@@ -1,3 +1,4 @@
+
 import { Stock } from './mockData';
 
 // Function to format large numbers with commas and abbreviations
@@ -42,9 +43,9 @@ export const getBubbleColor = (changePercent: number): string => {
 
 // Function to determine bubble size based on market cap
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
-  // Min size: 40px, Max size: 120px, scaled by market cap
-  const minSize = 40;
-  const maxSize = 120;
+  // Min size: 80px, Max size: 180px, scaled by market cap
+  const minSize = 80;
+  const maxSize = 180;
   const sizeRatio = Math.sqrt(marketCap / maxMarketCap);
   return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio));
 };
