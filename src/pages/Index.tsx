@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import SearchBar from '@/components/SearchBar';
@@ -6,7 +5,7 @@ import FilterBar from '@/components/FilterBar';
 import StockBubble from '@/components/StockBubble';
 import InfoPanel from '@/components/InfoPanel';
 import Footer from '@/components/Footer';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { 
   generateInitialStocks, 
   updateStockPrices, 
@@ -16,8 +15,13 @@ import {
 import { 
   filterStocksBySearch, 
   filterStocksBySector, 
-  getMaxMarketCap 
+  getMaxMarketCap,
+  formatPercentage,
+  formatCurrency
 } from '@/lib/stockUtils';
+import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 const Index = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
@@ -31,14 +35,14 @@ const Index = () => {
   
   const updateIntervalRef = useRef<number | null>(null);
   
-  // Initialize stocks
+  const [activeSection, setActiveSection] = useState<'sectors' | 'performance'>('sectors');
+  
   useEffect(() => {
     const initialStocks = generateInitialStocks();
     setStocks(initialStocks);
     setFilteredStocks(initialStocks);
     setLoading(false);
     
-    // Update stocks every 8 seconds
     updateIntervalRef.current = window.setInterval(() => {
       setStocks(prev => updateStockPrices(prev));
     }, 8000);
@@ -50,10 +54,8 @@ const Index = () => {
     };
   }, []);
   
-  // Handle scroll to show/hide footer
   useEffect(() => {
     const handleScroll = () => {
-      // Show footer when user scrolls down a bit
       if (window.scrollY > 300) {
         setShowFooter(true);
       } else {
@@ -65,14 +67,10 @@ const Index = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
   
-  // Apply filters when stocks, search term, or sector changes
   useEffect(() => {
     let result = [...stocks];
     
-    // Apply sector filter
     result = filterStocksBySector(result, selectedSector);
-    
-    // Apply search filter
     result = filterStocksBySearch(result, searchTerm);
     
     setFilteredStocks(result);
@@ -100,7 +98,6 @@ const Index = () => {
   
   const maxMarketCap = getMaxMarketCap(stocks);
   
-  // Sample index data for the footer
   const indexData = [
     { name: 'NIFTY 50', value: 22341.65, changePercent: 0.82 },
     { name: 'SENSEX', value: 73354.12, changePercent: 0.76 },
@@ -108,8 +105,13 @@ const Index = () => {
     { name: 'INDIA VIX', value: 13.86, changePercent: -2.34 },
   ];
   
-  // Get sector performance for the footer
   const sectorPerformance = getSectorPerformance(stocks);
+  
+  const sortedSectorPerformance = [...sectorPerformance].sort((a, b) => 
+    activeSection === 'sectors' 
+      ? b.marketCap - a.marketCap 
+      : b.changePercent - a.changePercent
+  );
   
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden bg-background">
@@ -167,7 +169,128 @@ const Index = () => {
           </>
         )}
         
-        {/* Footer that appears when scrolling down */}
+        <div className="pt-10 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto">
+          <div className="mb-6 flex justify-between items-center">
+            <h2 className="text-2xl font-bold">Market Insights</h2>
+            <div className="bg-muted/50 p-1 rounded-lg flex">
+              <button
+                onClick={() => setActiveSection('sectors')}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  activeSection === 'sectors' 
+                    ? 'bg-background shadow-sm' 
+                    : 'hover:bg-background/50'
+                }`}
+              >
+                Sector Size
+              </button>
+              <button
+                onClick={() => setActiveSection('performance')}
+                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  activeSection === 'performance' 
+                    ? 'bg-background shadow-sm' 
+                    : 'hover:bg-background/50'
+                }`}
+              >
+                Performance
+              </button>
+            </div>
+          </div>
+          
+          <div className="bg-muted/20 rounded-lg p-4 mb-12">
+            <motion.div
+              key={activeSection}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="h-[400px]"
+            >
+              <ChartContainer
+                config={{
+                  marketCap: { label: 'Market Cap' },
+                  changePercent: { 
+                    theme: { light: '#22c55e', dark: '#22c55e' }
+                  }
+                }}
+              >
+                <BarChart
+                  data={sortedSectorPerformance}
+                  layout="vertical"
+                  margin={{ top: 20, right: 30, left: 100, bottom: 10 }}
+                >
+                  <XAxis 
+                    type="number" 
+                    hide={activeSection === 'performance'}
+                  />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    width={90}
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-popover border border-border rounded-md shadow-lg p-2 text-sm">
+                            <p className="font-medium">{data.name}</p>
+                            {activeSection === 'sectors' ? (
+                              <p>Market Cap: {formatCurrency(data.marketCap)}</p>
+                            ) : (
+                              <div className="flex items-center">
+                                <span>Performance: </span>
+                                <span className={`ml-1 flex items-center ${data.changePercent >= 0 ? 'text-profit' : 'text-loss'}`}>
+                                  {data.changePercent >= 0 ? (
+                                    <TrendingUp size={14} className="mr-1" />
+                                  ) : (
+                                    <TrendingDown size={14} className="mr-1" />
+                                  )}
+                                  {formatPercentage(data.changePercent)}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  {activeSection === 'sectors' ? (
+                    <Bar 
+                      dataKey="marketCap" 
+                      fill="url(#marketCapGradient)" 
+                      barSize={24}
+                      radius={[0, 4, 4, 0]}
+                    >
+                      <defs>
+                        <linearGradient id="marketCapGradient" x1="0" y1="0" x2="1" y2="0">
+                          <stop offset="0%" stopColor="#6E59A5" />
+                          <stop offset="100%" stopColor="#9b87f5" />
+                        </linearGradient>
+                      </defs>
+                    </Bar>
+                  ) : (
+                    <Bar 
+                      dataKey="changePercent" 
+                      barSize={24}
+                      radius={[0, 4, 4, 0]}
+                      fill="transparent"
+                    >
+                      {sortedSectorPerformance.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.changePercent >= 0 ? '#22c55e' : '#ef4444'} 
+                        />
+                      ))}
+                    </Bar>
+                  )}
+                </BarChart>
+              </ChartContainer>
+            </motion.div>
+          </div>
+        </div>
+        
         <AnimatePresence>
           {showFooter && (
             <div className="fixed bottom-0 left-0 right-0 z-40">
@@ -189,7 +312,6 @@ const Index = () => {
         )}
       </AnimatePresence>
       
-      {/* Add extra space at the bottom for scrolling to reveal footer */}
       <div className="h-40 md:h-60"></div>
     </div>
   );
