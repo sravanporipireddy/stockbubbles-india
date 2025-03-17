@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import SearchBar from '@/components/SearchBar';
@@ -17,11 +18,32 @@ import {
   filterStocksBySector, 
   getMaxMarketCap,
   formatPercentage,
-  formatCurrency
+  formatCurrency,
+  formatPrice,
+  getTextColor,
+  sortStocks,
+  SortCriteria,
+  SortDirection
 } from '@/lib/stockUtils';
-import { ChartContainer, ChartTooltip } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { ChartContainer } from '@/components/ui/chart';
+import { TrendingUp, TrendingDown, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const Index = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
@@ -33,9 +55,13 @@ const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showFooter, setShowFooter] = useState(false);
   
-  const updateIntervalRef = useRef<number | null>(null);
+  // Table state
+  const [sortBy, setSortBy] = useState<SortCriteria>('marketCap');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   
-  const [activeSection, setActiveSection] = useState<'sectors' | 'performance'>('sectors');
+  const updateIntervalRef = useRef<number | null>(null);
   
   useEffect(() => {
     const initialStocks = generateInitialStocks();
@@ -74,6 +100,8 @@ const Index = () => {
     result = filterStocksBySearch(result, searchTerm);
     
     setFilteredStocks(result);
+    // Reset to first page when filters change
+    setCurrentPage(1);
   }, [stocks, searchTerm, selectedSector]);
   
   const handleSearch = (term: string) => {
@@ -96,6 +124,17 @@ const Index = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
   
+  const handleSort = (criteria: SortCriteria) => {
+    if (sortBy === criteria) {
+      // Toggle direction if clicking the same column
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Default to descending for new sort column
+      setSortBy(criteria);
+      setSortDirection('desc');
+    }
+  };
+  
   const maxMarketCap = getMaxMarketCap(stocks);
   
   const indexData = [
@@ -105,13 +144,22 @@ const Index = () => {
     { name: 'INDIA VIX', value: 13.86, changePercent: -2.34 },
   ];
   
+  // Apply sort to the filtered stocks
+  const sortedStocks = sortStocks(filteredStocks, sortBy, sortDirection);
+  
+  // Calculate pagination
+  const totalPages = Math.ceil(sortedStocks.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const visibleStocks = sortedStocks.slice(startIndex, startIndex + itemsPerPage);
+  
   const sectorPerformance = getSectorPerformance(stocks);
   
-  const sortedSectorPerformance = [...sectorPerformance].sort((a, b) => 
-    activeSection === 'sectors' 
-      ? b.marketCap - a.marketCap 
-      : b.changePercent - a.changePercent
-  );
+  const renderSortIcon = (column: SortCriteria) => {
+    if (sortBy !== column) return <ArrowUpDown size={16} className="ml-1 opacity-50" />;
+    return sortDirection === 'desc' 
+      ? <ArrowDown size={16} className="ml-1" /> 
+      : <ArrowUp size={16} className="ml-1" />;
+  };
   
   return (
     <div className="flex flex-col min-h-screen overflow-x-hidden bg-background">
@@ -171,124 +219,146 @@ const Index = () => {
         
         <div className="pt-10 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto">
           <div className="mb-6 flex justify-between items-center">
-            <h2 className="text-2xl font-bold">Market Insights</h2>
-            <div className="bg-muted/50 p-1 rounded-lg flex">
-              <button
-                onClick={() => setActiveSection('sectors')}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  activeSection === 'sectors' 
-                    ? 'bg-background shadow-sm' 
-                    : 'hover:bg-background/50'
-                }`}
-              >
-                Sector Size
-              </button>
-              <button
-                onClick={() => setActiveSection('performance')}
-                className={`px-4 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                  activeSection === 'performance' 
-                    ? 'bg-background shadow-sm' 
-                    : 'hover:bg-background/50'
-                }`}
-              >
-                Performance
-              </button>
+            <h2 className="text-2xl font-bold">Stock List</h2>
+            <Tabs defaultValue="all" className="w-fit">
+              <TabsList>
+                <TabsTrigger value="all">All Stocks</TabsTrigger>
+                <TabsTrigger value="gainers">Top Gainers</TabsTrigger>
+                <TabsTrigger value="losers">Top Losers</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+          
+          <div className="border rounded-lg overflow-hidden mb-6">
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead 
+                      className="w-[100px] cursor-pointer"
+                      onClick={() => handleSort('name')}
+                    >
+                      <div className="flex items-center">
+                        Symbol
+                        {renderSortIcon('name')}
+                      </div>
+                    </TableHead>
+                    <TableHead>Name</TableHead>
+                    <TableHead 
+                      className="cursor-pointer text-right"
+                      onClick={() => handleSort('price')}
+                    >
+                      <div className="flex items-center justify-end">
+                        Price (₹)
+                        {renderSortIcon('price')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer text-right"
+                      onClick={() => handleSort('changePercent')}
+                    >
+                      <div className="flex items-center justify-end">
+                        24h Change
+                        {renderSortIcon('changePercent')}
+                      </div>
+                    </TableHead>
+                    <TableHead 
+                      className="cursor-pointer text-right hidden md:table-cell"
+                      onClick={() => handleSort('marketCap')}
+                    >
+                      <div className="flex items-center justify-end">
+                        Market Cap
+                        {renderSortIcon('marketCap')}
+                      </div>
+                    </TableHead>
+                    <TableHead className="text-right hidden lg:table-cell">Sector</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {visibleStocks.map((stock) => (
+                    <TableRow 
+                      key={stock.id}
+                      className="cursor-pointer hover:bg-muted/80"
+                      onClick={() => handleStockClick(stock)}
+                    >
+                      <TableCell className="font-medium">{stock.symbol}</TableCell>
+                      <TableCell className="max-w-[200px] truncate">{stock.name}</TableCell>
+                      <TableCell className="text-right font-medium">
+                        {formatPrice(stock.price)}
+                      </TableCell>
+                      <TableCell className={`text-right ${getTextColor(stock.changePercent)}`}>
+                        <div className="flex items-center justify-end">
+                          {stock.changePercent >= 0 ? (
+                            <TrendingUp size={14} className="mr-1" />
+                          ) : (
+                            <TrendingDown size={14} className="mr-1" />
+                          )}
+                          {formatPercentage(stock.changePercent)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right hidden md:table-cell">{formatCurrency(stock.marketCap)}</TableCell>
+                      <TableCell className="text-right hidden lg:table-cell">{stock.sector}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </div>
           
-          <div className="bg-muted/20 rounded-lg p-4 mb-12">
-            <motion.div
-              key={activeSection}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              className="h-[400px]"
-            >
-              <ChartContainer
-                config={{
-                  marketCap: { label: 'Market Cap' },
-                  changePercent: { 
-                    theme: { light: '#22c55e', dark: '#22c55e' }
-                  }
-                }}
-              >
-                <BarChart
-                  data={sortedSectorPerformance}
-                  layout="vertical"
-                  margin={{ top: 20, right: 30, left: 100, bottom: 10 }}
-                >
-                  <XAxis 
-                    type="number" 
-                    hide={activeSection === 'performance'}
-                  />
-                  <YAxis 
-                    type="category" 
-                    dataKey="name" 
-                    width={90}
-                    tick={{ fontSize: 12 }}
-                  />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-popover border border-border rounded-md shadow-lg p-2 text-sm">
-                            <p className="font-medium">{data.name}</p>
-                            {activeSection === 'sectors' ? (
-                              <p>Market Cap: {formatCurrency(data.marketCap)}</p>
-                            ) : (
-                              <div className="flex items-center">
-                                <span>Performance: </span>
-                                <span className={`ml-1 flex items-center ${data.changePercent >= 0 ? 'text-profit' : 'text-loss'}`}>
-                                  {data.changePercent >= 0 ? (
-                                    <TrendingUp size={14} className="mr-1" />
-                                  ) : (
-                                    <TrendingDown size={14} className="mr-1" />
-                                  )}
-                                  {formatPercentage(data.changePercent)}
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      }
-                      return null;
+          {totalPages > 1 && (
+            <Pagination className="mb-10">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious 
+                    href="#" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage > 1) setCurrentPage(currentPage - 1);
                     }}
+                    className={currentPage === 1 ? 'pointer-events-none opacity-50' : ''}
                   />
-                  {activeSection === 'sectors' ? (
-                    <Bar 
-                      dataKey="marketCap" 
-                      fill="url(#marketCapGradient)" 
-                      barSize={24}
-                      radius={[0, 4, 4, 0]}
-                    >
-                      <defs>
-                        <linearGradient id="marketCapGradient" x1="0" y1="0" x2="1" y2="0">
-                          <stop offset="0%" stopColor="#6E59A5" />
-                          <stop offset="100%" stopColor="#9b87f5" />
-                        </linearGradient>
-                      </defs>
-                    </Bar>
-                  ) : (
-                    <Bar 
-                      dataKey="changePercent" 
-                      barSize={24}
-                      radius={[0, 4, 4, 0]}
-                      fill="transparent"
-                    >
-                      {sortedSectorPerformance.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.changePercent >= 0 ? '#22c55e' : '#ef4444'} 
-                        />
-                      ))}
-                    </Bar>
-                  )}
-                </BarChart>
-              </ChartContainer>
-            </motion.div>
-          </div>
+                </PaginationItem>
+                
+                {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
+                  // For simplicity, show max 5 page numbers
+                  let pageNum = i + 1;
+                  if (totalPages > 5) {
+                    if (currentPage > 3) {
+                      pageNum = currentPage - 3 + i;
+                      if (pageNum > totalPages) pageNum = totalPages - (4 - i);
+                    }
+                    if (pageNum > totalPages) return null;
+                  }
+                  
+                  return (
+                    <PaginationItem key={pageNum}>
+                      <PaginationLink 
+                        href="#" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setCurrentPage(pageNum);
+                        }}
+                        isActive={currentPage === pageNum}
+                      >
+                        {pageNum}
+                      </PaginationLink>
+                    </PaginationItem>
+                  );
+                })}
+                
+                <PaginationItem>
+                  <PaginationNext 
+                    href="#" 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+                    }}
+                    className={currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          )}
         </div>
         
         <AnimatePresence>
