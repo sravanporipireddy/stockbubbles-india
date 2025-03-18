@@ -19,18 +19,19 @@ interface StockBubbleProps {
 const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick }) => {
   const [isHovering, setIsHovering] = useState(false);
   
-  const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap);
+  // Adjust bubble size calculation to make bubbles closer together
+  const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap) * 0.9; // Reduce size by 10%
   const bubbleColor = getBubbleColor(stock.changePercent);
   const isPositive = stock.changePercent > 0;
   
   const randomSeed = parseInt(stock.id.substring(0, 8), 16);
   const floatDuration = 3 + (randomSeed % 4); // 3-6 seconds
-  const floatY = 10 + (randomSeed % 15); // 10-24px movement
+  const floatY = 8 + (randomSeed % 10); // 8-17px movement (reduced range)
   const delayOffset = (randomSeed % 10) / 10; // 0-0.9 second delay
   
   return (
     <motion.div
-      className="relative cursor-pointer"
+      className="relative cursor-pointer m-0 p-0" // Remove any margins/padding
       initial={{ scale: 0, opacity: 0 }}
       animate={{ 
         scale: 1, 
@@ -48,34 +49,38 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
         }
       }}
       exit={{ scale: 0, opacity: 0 }}
-      style={{ width: bubbleSize, height: bubbleSize }}
+      style={{ 
+        width: bubbleSize, 
+        height: bubbleSize,
+        margin: `-${Math.floor(bubbleSize * 0.1)}px`, // Negative margin to overlap slightly
+      }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onClick={() => onClick(stock)}
       whileHover={{ scale: 1.1, zIndex: 10 }}
     >
       <motion.div 
-        className={`absolute inset-0 rounded-full shadow-subtle flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-4`}
+        className={`absolute inset-0 rounded-full shadow-subtle flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-3`} // Reduced padding
         animate={{ 
           boxShadow: isHovering 
             ? '0 0 0 2px rgba(255,255,255,0.8), 0 8px 20px rgba(0,0,0,0.2)' 
             : '0 4px 8px rgba(0,0,0,0.1)'
         }}
       >
-        <span className="font-bold text-white text-center px-1 text-base sm:text-lg md:text-xl truncate w-full">
+        <span className="font-bold text-white text-center px-1 text-xs sm:text-sm md:text-base truncate w-full">
           {stock.symbol}
         </span>
         
-        <div className="flex items-center justify-center gap-1 text-white font-semibold mt-2">
-          <IndianRupee size={16} />
-          <span className="text-sm sm:text-base">{formatPrice(stock.price)}</span>
+        <div className="flex items-center justify-center gap-1 text-white font-semibold mt-1"> {/* Reduced margin */}
+          <IndianRupee size={12} /> {/* Smaller icon */}
+          <span className="text-xs sm:text-sm">{formatPrice(stock.price)}</span>
         </div>
         
-        <div className="flex items-center justify-center mt-2 text-sm font-medium text-white">
+        <div className="flex items-center justify-center mt-1 text-xs font-medium text-white"> {/* Reduced margin and font size */}
           {isPositive ? (
-            <TrendingUp size={14} className="mr-1" />
+            <TrendingUp size={12} className="mr-1" /> {/* Smaller icon */}
           ) : (
-            <TrendingDown size={14} className="mr-1" />
+            <TrendingDown size={12} className="mr-1" /> {/* Smaller icon */}
           )}
           <span>{formatPercentage(stock.changePercent)}</span>
         </div>
