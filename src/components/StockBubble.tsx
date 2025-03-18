@@ -20,32 +20,51 @@ interface StockBubbleProps {
 const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick, index }) => {
   const [isHovering, setIsHovering] = useState(false);
   
-  // Get a proper random seed from stock ID
-  const randomSeed = parseInt(stock.id.substring(0, 8), 16);
+  // Generate a unique number from stock ID for consistent positioning
+  const hashCode = (str: string) => {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash);
+  };
+  
+  const idHash = hashCode(stock.id);
   
   // Adjust bubble size calculation for better visual appearance
   const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap);
   const bubbleColor = getBubbleColor(stock.changePercent);
   const isPositive = stock.changePercent > 0;
   
-  // Create more varied starting positions to pack bubbles closer together
-  // Use stock id plus index to create more variation
-  const posX = ((randomSeed % 140) - 70) * 1.1; // Wider range: -77px to +77px
-  const posY = ((randomSeed % 120) - 60) * 1.1; // Higher range: -66px to +66px
+  // Create more distributed initial positions
+  const containerWidth = window.innerWidth * 0.9; // 90% of window width
+  const containerHeight = 600; // Height of the container
   
-  // Create more varied floating animations
-  const floatAmplitude = 6 + (randomSeed % 10); // 6-15px movement range
-  const floatDuration = 2 + (randomSeed % 3) + (randomSeed % 10) / 10; // 2-4.9 seconds
-  const floatDelay = (randomSeed % 20) / 10; // 0-1.9 second delay
+  // Use the hash and some math to distribute bubbles throughout the container
+  // This creates a pseudorandom but deterministic distribution
+  const baseX = (idHash % 100) / 100; // Value between 0-1
+  const baseY = ((idHash >> 10) % 100) / 100; // Different bit range for Y
   
-  // Multiple float directions with different timing
-  const floatX1 = ((randomSeed % 14) - 7) * 0.9; // More horizontal movement
-  const floatX2 = ((randomSeed % 20) - 10) * 0.7; // More horizontal variety
-  const floatY1 = floatAmplitude * -1; // Always float upward slightly
-  const floatY2 = floatAmplitude * -0.8; // Secondary smaller upward float
+  // Calculate position as percentage of container
+  const posXPercent = baseX * 0.8 + 0.1; // 10% to 90% of width
+  const posYPercent = baseY * 0.8 + 0.1; // 10% to 90% of height
   
-  // Create smooth transitions with custom easing
-  const customEase = [0.4, 0, 0.6, 1]; // Smoother motion curve
+  // Convert to pixels
+  const posX = (posXPercent * containerWidth) - (containerWidth / 2);
+  const posY = (posYPercent * containerHeight) - (containerHeight / 2);
+  
+  // Create varied floating animations
+  const floatXAmp = ((idHash % 30) - 15) * 0.7; // -10.5 to 10.5px horizontal float
+  const floatYAmp = ((idHash % 40) - 20) * 0.6; // -12 to 12px vertical float
+  
+  // Animation durations and delays (in seconds)
+  const floatDuration = 2 + ((idHash % 25) / 10); // 2-4.5s
+  const floatDelay = (idHash % 20) / 10; // 0-1.9s delay
+  
+  // Custom ease curve for more organic movement
+  const customEase = [0.4, 0, 0.6, 1];
   
   return (
     <motion.div
@@ -53,31 +72,32 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick,
       initial={{ 
         scale: 0,
         opacity: 0,
-        x: posX - 10,
-        y: posY - 10
+        x: posX,
+        y: posY
       }}
       animate={{ 
         scale: 1, 
         opacity: 1,
-        x: [posX + floatX1, posX + floatX2, posX],
-        y: [posY, posY + floatY1, posY + floatY2]
+        x: [posX, posX + floatXAmp, posX],
+        y: [posY, posY + floatYAmp, posY]
       }}
       transition={{ 
-        type: "tween",
-        duration: 0.6,
-        delay: 0.05 * (index % 20), // Staggered appearance
+        type: "spring",
+        stiffness: 50,
+        damping: 20,
+        delay: 0.02 * index, // Staggered appearance
         x: {
           repeat: Infinity,
-          duration: floatDuration * 1.3,
+          repeatType: "mirror",
+          duration: floatDuration,
           ease: customEase,
-          repeatType: "reverse",
           delay: floatDelay
         },
         y: {
           repeat: Infinity,
-          duration: floatDuration,
+          repeatType: "mirror",
+          duration: floatDuration * 1.2,
           ease: customEase,
-          repeatType: "reverse",
           delay: floatDelay * 0.7
         }
       }}
