@@ -36,7 +36,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
       animate={{ 
         scale: 1, 
         opacity: 1,
-        y: [0, -floatY, 0],
+        y: [0, -floatY, 0]
       }}
       transition={{ 
         scale: { type: 'spring', stiffness: 300, damping: 20 },
@@ -52,7 +52,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
       style={{ 
         width: bubbleSize, 
         height: bubbleSize,
-        margin: `-${Math.floor(bubbleSize * 0.1)}px`, // Negative margin to overlap slightly
+        margin: `-${Math.floor(bubbleSize * 0.1)}px` // Negative margin to overlap slightly
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
