@@ -19,84 +19,104 @@ interface StockBubbleProps {
 const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick }) => {
   const [isHovering, setIsHovering] = useState(false);
   
-  // Adjust bubble size calculation to make bubbles closer together
-  const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap) * 0.85; // Reduce size by 15%
+  // Get a proper random seed from stock ID
+  const randomSeed = parseInt(stock.id.substring(0, 8), 16);
+  
+  // Adjust bubble size calculation for better visual appearance
+  const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap) * 0.75;
   const bubbleColor = getBubbleColor(stock.changePercent);
   const isPositive = stock.changePercent > 0;
   
-  // Generate random values based on stock ID for bubble positioning and animation
-  const randomSeed = parseInt(stock.id.substring(0, 8), 16);
+  // Create true random-looking movement patterns
+  const floatAmplitude = 5 + (randomSeed % 8); // 5-12px movement range
+  const floatDuration = 2 + (randomSeed % 3) + (randomSeed % 10) / 10; // 2-4.9 seconds
+  const floatDelay = (randomSeed % 20) / 10; // 0-1.9 second delay
   
-  // More varied animation parameters for a more natural look
-  const floatDuration = 3 + (randomSeed % 5); // 3-7 seconds
-  const floatY = 8 + (randomSeed % 15); // 8-22px vertical movement
-  const floatX = (randomSeed % 8) - 4; // -4 to +3px horizontal movement
-  const delayOffset = (randomSeed % 10) / 10; // 0-0.9 second delay
+  // Calculate a more organic starting position 
+  // This creates a proper bubble cloud effect rather than a grid
+  const posX = ((randomSeed % 100) - 50) * 0.8; // -40px to +40px
+  const posY = ((randomSeed % 80) - 40) * 0.8; // -32px to +32px
   
-  // Random position offset to break the grid-like arrangement
-  const offsetX = ((randomSeed % 40) - 20); // -20px to +19px horizontal offset
-  const offsetY = ((randomSeed % 30) - 15); // -15px to +14px vertical offset
+  // Multiple float directions with different timing
+  // This creates more organic movement like real bubbles
+  const floatX1 = ((randomSeed % 10) - 5) * 0.6; // -3px to +3px
+  const floatX2 = ((randomSeed % 14) - 7) * 0.4; // -2.8px to +2.8px
+  const floatY1 = floatAmplitude * -1; // Always float upward slightly
+  const floatY2 = floatAmplitude * -0.7; // Secondary smaller upward float
+  
+  // Create smooth transitions with custom easing
+  const customEase = [0.4, 0, 0.6, 1]; // Smoother motion curve
   
   return (
     <motion.div
       className="relative cursor-pointer"
-      initial={{ scale: 0, opacity: 0 }}
+      initial={{ 
+        scale: 0.6, 
+        opacity: 0,
+        x: posX - 5,
+        y: posY - 5
+      }}
       animate={{ 
         scale: 1, 
         opacity: 1,
-        y: [0, -floatY, 0],
-        x: [0, floatX, 0]
+        x: [posX + floatX1, posX + floatX2, posX],
+        y: [posY, posY + floatY1, posY + floatY2]
       }}
       transition={{ 
-        scale: { type: 'spring', stiffness: 300, damping: 20 },
-        opacity: { duration: 0.5 },
-        y: { 
-          repeat: Infinity, 
-          duration: floatDuration, 
-          ease: "easeInOut",
-          delay: delayOffset
-        },
+        type: "tween",
+        duration: 0.5,
         x: {
           repeat: Infinity,
-          duration: floatDuration * 1.2,
-          ease: "easeInOut",
-          delay: delayOffset * 0.5
+          duration: floatDuration * 1.3,
+          ease: customEase,
+          repeatType: "reverse",
+          delay: floatDelay
+        },
+        y: {
+          repeat: Infinity,
+          duration: floatDuration,
+          ease: customEase,
+          repeatType: "reverse",
+          delay: floatDelay * 0.7
         }
       }}
       exit={{ scale: 0, opacity: 0 }}
       style={{ 
         width: bubbleSize, 
         height: bubbleSize,
-        margin: `-${Math.floor(bubbleSize * 0.15)}px`,
-        transform: `translate(${offsetX}px, ${offsetY}px)`
+        zIndex: 1
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onClick={() => onClick(stock)}
-      whileHover={{ scale: 1.1, zIndex: 20 }}
+      whileHover={{ 
+        scale: 1.15, 
+        zIndex: 50, 
+        transition: { duration: 0.2 } 
+      }}
     >
       <motion.div 
-        className={`absolute inset-0 rounded-full shadow-subtle flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-3`}
+        className={`absolute inset-0 rounded-full flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-2`}
         animate={{ 
           boxShadow: isHovering 
-            ? '0 0 0 2px rgba(255,255,255,0.8), 0 8px 20px rgba(0,0,0,0.2)' 
-            : '0 4px 8px rgba(0,0,0,0.1)'
+            ? '0 0 0 3px rgba(255,255,255,0.6), 0 8px 25px rgba(0,0,0,0.3)' 
+            : '0 4px 10px rgba(0,0,0,0.15)'
         }}
       >
-        <span className="font-bold text-white text-center px-1 text-xs sm:text-sm md:text-base truncate w-full">
+        <span className="font-bold text-white text-center px-1 text-xs sm:text-sm truncate w-full">
           {stock.symbol}
         </span>
         
-        <div className="flex items-center justify-center gap-1 text-white font-semibold mt-1">
-          <IndianRupee size={12} />
-          <span className="text-xs sm:text-sm">{formatPrice(stock.price)}</span>
+        <div className="flex items-center justify-center gap-1 text-white font-medium mt-1">
+          <IndianRupee size={10} />
+          <span className="text-xs">{formatPrice(stock.price)}</span>
         </div>
         
-        <div className="flex items-center justify-center mt-1 text-xs font-medium text-white">
+        <div className="flex items-center justify-center text-xs font-medium text-white mt-0.5">
           {isPositive ? (
-            <TrendingUp size={12} className="mr-1" />
+            <TrendingUp size={10} className="mr-0.5" />
           ) : (
-            <TrendingDown size={12} className="mr-1" />
+            <TrendingDown size={10} className="mr-0.5" />
           )}
           <span>{formatPercentage(stock.changePercent)}</span>
         </div>

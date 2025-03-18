@@ -33,20 +33,23 @@ export const formatPrice = (price: number): string => {
 
 // Function to determine bubble color based on performance
 export const getBubbleColor = (changePercent: number): string => {
-  if (changePercent > 4) return 'bg-green-600';
-  if (changePercent > 2) return 'bg-green-500';
-  if (changePercent > 0) return 'bg-green-400';
-  if (changePercent > -2) return 'bg-red-400';
-  if (changePercent > -4) return 'bg-red-500';
-  return 'bg-red-600';
+  // More vibrant color scheme with gradients
+  if (changePercent > 5) return 'bg-gradient-to-br from-green-500 to-green-700';
+  if (changePercent > 2) return 'bg-gradient-to-br from-green-400 to-green-600';
+  if (changePercent > 0) return 'bg-gradient-to-br from-green-300 to-green-500';
+  if (changePercent > -2) return 'bg-gradient-to-br from-red-300 to-red-500';
+  if (changePercent > -5) return 'bg-gradient-to-br from-red-400 to-red-600';
+  return 'bg-gradient-to-br from-red-500 to-red-700';
 };
 
 // Function to determine bubble size based on market cap
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
-  // Min size: 80px, Max size: 180px, scaled by market cap
-  const minSize = 80;
-  const maxSize = 180;
-  const sizeRatio = Math.sqrt(marketCap / maxMarketCap);
+  // Adjust size range for better visual appearance
+  const minSize = 70;
+  const maxSize = 160;
+  
+  // Use cubic root scaling for more balanced bubble sizes
+  const sizeRatio = Math.pow(marketCap / maxMarketCap, 1/3);
   return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio));
 };
 
