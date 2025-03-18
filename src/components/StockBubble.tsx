@@ -20,23 +20,32 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
   const [isHovering, setIsHovering] = useState(false);
   
   // Adjust bubble size calculation to make bubbles closer together
-  const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap) * 0.9; // Reduce size by 10%
+  const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap) * 0.85; // Reduce size by 15%
   const bubbleColor = getBubbleColor(stock.changePercent);
   const isPositive = stock.changePercent > 0;
   
+  // Generate random values based on stock ID for bubble positioning and animation
   const randomSeed = parseInt(stock.id.substring(0, 8), 16);
-  const floatDuration = 3 + (randomSeed % 4); // 3-6 seconds
-  const floatY = 8 + (randomSeed % 10); // 8-17px movement (reduced range)
+  
+  // More varied animation parameters for a more natural look
+  const floatDuration = 3 + (randomSeed % 5); // 3-7 seconds
+  const floatY = 8 + (randomSeed % 15); // 8-22px vertical movement
+  const floatX = (randomSeed % 8) - 4; // -4 to +3px horizontal movement
   const delayOffset = (randomSeed % 10) / 10; // 0-0.9 second delay
+  
+  // Random position offset to break the grid-like arrangement
+  const offsetX = ((randomSeed % 40) - 20); // -20px to +19px horizontal offset
+  const offsetY = ((randomSeed % 30) - 15); // -15px to +14px vertical offset
   
   return (
     <motion.div
-      className="relative cursor-pointer m-0 p-0" // Remove any margins/padding
+      className="relative cursor-pointer"
       initial={{ scale: 0, opacity: 0 }}
       animate={{ 
         scale: 1, 
         opacity: 1,
-        y: [0, -floatY, 0]
+        y: [0, -floatY, 0],
+        x: [0, floatX, 0]
       }}
       transition={{ 
         scale: { type: 'spring', stiffness: 300, damping: 20 },
@@ -46,18 +55,25 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick 
           duration: floatDuration, 
           ease: "easeInOut",
           delay: delayOffset
+        },
+        x: {
+          repeat: Infinity,
+          duration: floatDuration * 1.2,
+          ease: "easeInOut",
+          delay: delayOffset * 0.5
         }
       }}
       exit={{ scale: 0, opacity: 0 }}
       style={{ 
         width: bubbleSize, 
         height: bubbleSize,
-        margin: `-${Math.floor(bubbleSize * 0.1)}px` // Negative margin to overlap slightly
+        margin: `-${Math.floor(bubbleSize * 0.15)}px`,
+        transform: `translate(${offsetX}px, ${offsetY}px)`
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onClick={() => onClick(stock)}
-      whileHover={{ scale: 1.1, zIndex: 10 }}
+      whileHover={{ scale: 1.1, zIndex: 20 }}
     >
       <motion.div 
         className={`absolute inset-0 rounded-full shadow-subtle flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-3`}
