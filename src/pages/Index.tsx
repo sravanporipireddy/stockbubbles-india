@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import SearchBar from '@/components/SearchBar';
@@ -55,7 +54,6 @@ const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showFooter, setShowFooter] = useState(false);
   
-  // Table state
   const [sortBy, setSortBy] = useState<SortCriteria>('marketCap');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [currentPage, setCurrentPage] = useState(1);
@@ -100,7 +98,6 @@ const Index = () => {
     result = filterStocksBySearch(result, searchTerm);
     
     setFilteredStocks(result);
-    // Reset to first page when filters change
     setCurrentPage(1);
   }, [stocks, searchTerm, selectedSector]);
   
@@ -126,10 +123,8 @@ const Index = () => {
   
   const handleSort = (criteria: SortCriteria) => {
     if (sortBy === criteria) {
-      // Toggle direction if clicking the same column
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
     } else {
-      // Default to descending for new sort column
       setSortBy(criteria);
       setSortDirection('desc');
     }
@@ -144,10 +139,8 @@ const Index = () => {
     { name: 'INDIA VIX', value: 13.86, changePercent: -2.34 },
   ];
   
-  // Apply sort to the filtered stocks
   const sortedStocks = sortStocks(filteredStocks, sortBy, sortDirection);
   
-  // Calculate pagination
   const totalPages = Math.ceil(sortedStocks.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const visibleStocks = sortedStocks.slice(startIndex, startIndex + itemsPerPage);
@@ -201,17 +194,16 @@ const Index = () => {
                 <p className="text-muted-foreground">Try adjusting your filters</p>
               </div>
             ) : (
-              <div className="flex flex-wrap justify-center gap-3 sm:gap-4 md:gap-5 px-2 py-4 animate-fade-in min-h-[calc(100vh-300px)]">
-                <AnimatePresence>
-                  {filteredStocks.map(stock => (
-                    <StockBubble
-                      key={stock.id}
-                      stock={stock}
-                      maxMarketCap={maxMarketCap}
-                      onClick={handleStockClick}
-                    />
-                  ))}
-                </AnimatePresence>
+              <div className="relative h-[600px] max-w-6xl mx-auto animate-fade-in">
+                {filteredStocks.map((stock, index) => (
+                  <StockBubble
+                    key={stock.id}
+                    stock={stock}
+                    maxMarketCap={maxMarketCap}
+                    onClick={handleStockClick}
+                    index={index}
+                  />
+                ))}
               </div>
             )}
           </>
@@ -320,7 +312,6 @@ const Index = () => {
                 </PaginationItem>
                 
                 {Array.from({ length: Math.min(5, totalPages) }).map((_, i) => {
-                  // For simplicity, show max 5 page numbers
                   let pageNum = i + 1;
                   if (totalPages > 5) {
                     if (currentPage > 3) {

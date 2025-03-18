@@ -33,23 +33,23 @@ export const formatPrice = (price: number): string => {
 
 // Function to determine bubble color based on performance
 export const getBubbleColor = (changePercent: number): string => {
-  // More vibrant color scheme with gradients
-  if (changePercent > 5) return 'bg-gradient-to-br from-green-500 to-green-700';
-  if (changePercent > 2) return 'bg-gradient-to-br from-green-400 to-green-600';
-  if (changePercent > 0) return 'bg-gradient-to-br from-green-300 to-green-500';
-  if (changePercent > -2) return 'bg-gradient-to-br from-red-300 to-red-500';
-  if (changePercent > -5) return 'bg-gradient-to-br from-red-400 to-red-600';
-  return 'bg-gradient-to-br from-red-500 to-red-700';
+  // More vibrant color scheme with stronger gradients
+  if (changePercent > 5) return 'bg-gradient-to-br from-green-500 to-green-700 shadow-md shadow-green-600/20';
+  if (changePercent > 2) return 'bg-gradient-to-br from-green-400 to-green-600 shadow-md shadow-green-500/20';
+  if (changePercent > 0) return 'bg-gradient-to-br from-green-300 to-green-500 shadow-md shadow-green-400/20';
+  if (changePercent > -2) return 'bg-gradient-to-br from-red-300 to-red-500 shadow-md shadow-red-400/20';
+  if (changePercent > -5) return 'bg-gradient-to-br from-red-400 to-red-600 shadow-md shadow-red-500/20';
+  return 'bg-gradient-to-br from-red-500 to-red-700 shadow-md shadow-red-600/20';
 };
 
 // Function to determine bubble size based on market cap
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
-  // Adjust size range for better visual appearance
-  const minSize = 70;
-  const maxSize = 160;
+  // Adjust size range for better visual appearance and less white space
+  const minSize = 58; // Smaller minimum size
+  const maxSize = 140; // Slightly smaller maximum size
   
-  // Use cubic root scaling for more balanced bubble sizes
-  const sizeRatio = Math.pow(marketCap / maxMarketCap, 1/3);
+  // Use square root scaling for more balanced bubble sizes
+  const sizeRatio = Math.pow(marketCap / maxMarketCap, 1/2.5);
   return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio));
 };
 
