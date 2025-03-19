@@ -202,6 +202,7 @@ const Index = () => {
                     maxMarketCap={maxMarketCap}
                     onClick={handleStockClick}
                     index={index}
+                    allStocks={filteredStocks}
                   />
                 ))}
               </div>

@@ -1,4 +1,3 @@
-
 import { Stock } from './mockData';
 
 // Function to format large numbers with commas and abbreviations
@@ -45,8 +44,8 @@ export const getBubbleColor = (changePercent: number): string => {
 // Function to determine bubble size based on market cap
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
   // Use logarithmic scaling for more naturally distributed bubble sizes
-  const minSize = 40; // Minimum bubble size
-  const maxSize = 90; // Maximum bubble size
+  const minSize = 35; // Smaller minimum bubble size
+  const maxSize = 80; // Smaller maximum bubble size
   
   // Apply logarithmic scaling for better size distribution
   const logMarketCap = Math.log(marketCap + 1);

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { IndianRupee, TrendingUp, TrendingDown } from 'lucide-react';
 import { 
@@ -15,10 +15,12 @@ interface StockBubbleProps {
   maxMarketCap: number;
   onClick: (stock: Stock) => void;
   index: number; // For staggered animation
+  allStocks: Stock[]; // All stocks for collision detection
 }
 
-const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick, index }) => {
+const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick, index, allStocks }) => {
   const [isHovering, setIsHovering] = useState(false);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   
   // Generate a unique number from stock ID for consistent positioning
   const hashCode = (str: string) => {
@@ -38,30 +40,42 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick,
   const bubbleColor = getBubbleColor(stock.changePercent);
   const isPositive = stock.changePercent > 0;
   
-  // Define container dimensions and positioning
-  // D3-inspired positioning with circular arrangement
-  const containerWidth = window.innerWidth * 0.8; 
-  const containerHeight = 400;
+  // Define container dimensions
+  const containerWidth = Math.min(window.innerWidth * 0.8, 1200);
+  const containerHeight = 450;
+  const centerX = containerWidth / 2;
+  const centerY = containerHeight / 2;
   
-  // Calculate position using a circular arrangement similar to the D3 approach
-  // This distributes bubbles in a more organized way
-  const angle = (idHash % 360) * (Math.PI / 180);
-  const radius = Math.min(containerWidth, containerHeight) * 0.35;
-  
-  // Position the bubble in a circular pattern from the center
-  let posX = Math.cos(angle) * radius;
-  let posY = Math.sin(angle) * radius;
-  
-  // Add some slight randomness based on hash to avoid perfect circle
-  posX += ((idHash % 50) - 25) * 0.8;
-  posY += ((idHash >> 8) % 50 - 25) * 0.8;
+  // Generate initial position using golden ratio distribution for better spacing
+  useEffect(() => {
+    const goldenRatio = 1.618033988749895;
+    const goldenAngle = Math.PI * 2 * (1 - 1 / goldenRatio);
+    
+    // Start with a spiral layout based on index
+    const radius = Math.sqrt(index + 1) * 25;
+    const angle = index * goldenAngle;
+    
+    // Calculate initial position in a spiral pattern
+    let x = centerX + radius * Math.cos(angle);
+    let y = centerY + radius * Math.sin(angle);
+    
+    // Add slight randomness to break perfect patterns
+    x += ((idHash % 20) - 10) * 2;
+    y += ((idHash >> 4) % 20 - 10) * 2;
+    
+    // Ensure bubbles stay within container boundaries
+    x = Math.max(bubbleSize / 2, Math.min(containerWidth - bubbleSize / 2, x));
+    y = Math.max(bubbleSize / 2, Math.min(containerHeight - bubbleSize / 2, y));
+    
+    setPosition({ x, y });
+  }, [index, idHash, bubbleSize, centerX, centerY, containerWidth, containerHeight]);
   
   // Create varied floating animations for natural movement
-  const floatXAmp = ((idHash % 30) - 15) * 0.7; // Horizontal float
-  const floatYAmp = ((idHash % 40) - 20) * 0.6; // Vertical float
+  const floatXAmp = ((idHash % 16) - 8) * 0.7; // Reduced horizontal float amplitude
+  const floatYAmp = ((idHash % 20) - 10) * 0.6; // Reduced vertical float amplitude
   
   // Animation durations and delays (in seconds)
-  const floatDuration = 2 + ((idHash % 25) / 10); // 2-4.5s
+  const floatDuration = 2 + ((idHash % 20) / 10); // 2-4s
   const floatDelay = (idHash % 20) / 10; // 0-1.9s delay
   
   // Custom ease curve for more organic movement
@@ -73,14 +87,14 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick,
       initial={{ 
         scale: 0,
         opacity: 0,
-        x: posX,
-        y: posY
+        x: position.x,
+        y: position.y
       }}
       animate={{ 
         scale: 1, 
         opacity: 1,
-        x: [posX, posX + floatXAmp, posX],
-        y: [posY, posY + floatYAmp, posY]
+        x: [position.x, position.x + floatXAmp, position.x],
+        y: [position.y, position.y + floatYAmp, position.y]
       }}
       transition={{ 
         type: "spring",
@@ -107,9 +121,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick,
         width: bubbleSize, 
         height: bubbleSize,
         zIndex: isHovering ? 100 : 50,
-        left: '50%',
-        top: '50%',
-        transform: 'translate(-50%, -50%)' // Center the container
+        transform: `translate(-50%, -50%)` // Center the bubble
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
