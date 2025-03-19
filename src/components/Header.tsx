@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { IndianRupee, TrendingUp, Menu } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -23,7 +22,7 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
     <header 
       className={cn(
         "fixed top-0 left-0 right-0 z-50 py-4 px-6 transition-all duration-300 animate-slide-down",
-        scrolled ? "bg-white/90 backdrop-blur-md shadow-subtle" : "bg-transparent"
+        scrolled ? "bg-white/90 backdrop-blur-md shadow-subtle" : "bg-white/80 backdrop-blur-sm"
       )}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">

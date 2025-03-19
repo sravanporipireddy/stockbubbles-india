@@ -40,7 +40,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick,
   
   // Create more distributed initial positions
   const containerWidth = window.innerWidth * 0.9; // 90% of window width
-  const containerHeight = 500; // Height of the container
+  const containerHeight = 450; // Reduced height of the container
   
   // Use the hash and some math to distribute bubbles throughout the container
   // This creates a pseudorandom but deterministic distribution
@@ -105,7 +105,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick,
       style={{ 
         width: bubbleSize, 
         height: bubbleSize,
-        zIndex: isHovering ? 50 : 10 // Increased base z-index from 1 to 10
+        zIndex: isHovering ? 50 : 20 // Increased z-index further
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}

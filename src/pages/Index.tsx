@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import SearchBar from '@/components/SearchBar';
@@ -158,9 +159,9 @@ const Index = () => {
     <div className="flex flex-col min-h-screen overflow-x-hidden bg-background">
       <Header toggleSidebar={toggleSidebar} />
       
-      <div className="flex-1 pt-24 pb-20 relative min-h-[calc(100vh-64px)]">
-        <div className="sticky top-20 z-30 bg-background/80 backdrop-blur-sm pt-4 pb-2 px-2 md:px-4">
-          <div className="flex flex-col items-center mb-4 animate-fade-in">
+      <main className="flex-1 pt-28 pb-20 relative min-h-[calc(100vh-64px)]">
+        <div className="sticky top-20 z-30 bg-background/80 backdrop-blur-sm pt-4 pb-4 px-2 md:px-4 mb-8">
+          <div className="flex flex-col items-center animate-fade-in">
             <h1 className="text-2xl md:text-3xl font-bold text-center mb-3">
               Indian Stock Market Visualization
             </h1>
@@ -194,7 +195,7 @@ const Index = () => {
                 <p className="text-muted-foreground">Try adjusting your filters</p>
               </div>
             ) : (
-              <div className="relative h-[500px] max-w-6xl mx-auto animate-fade-in z-20 mt-8 mb-12">
+              <div className="relative h-[500px] max-w-6xl mx-auto animate-fade-in z-20 mt-2 mb-12">
                 {filteredStocks.map((stock, index) => (
                   <StockBubble
                     key={stock.id}
@@ -362,7 +363,7 @@ const Index = () => {
             </div>
           )}
         </AnimatePresence>
-      </div>
+      </main>
       
       <AnimatePresence>
         {selectedStock && (
