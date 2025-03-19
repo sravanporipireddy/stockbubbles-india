@@ -158,8 +158,8 @@ const Index = () => {
     <div className="flex flex-col min-h-screen overflow-x-hidden bg-background">
       <Header toggleSidebar={toggleSidebar} />
       
-      <div className="flex-1 pt-20 pb-20 relative min-h-[calc(100vh-64px)]">
-        <div className="sticky top-20 z-10 bg-background/80 backdrop-blur-sm pt-4 pb-2 px-2 md:px-4">
+      <div className="flex-1 pt-24 pb-20 relative min-h-[calc(100vh-64px)]">
+        <div className="sticky top-20 z-30 bg-background/80 backdrop-blur-sm pt-4 pb-2 px-2 md:px-4">
           <div className="flex flex-col items-center mb-4 animate-fade-in">
             <h1 className="text-2xl md:text-3xl font-bold text-center mb-3">
               Indian Stock Market Visualization
@@ -194,7 +194,7 @@ const Index = () => {
                 <p className="text-muted-foreground">Try adjusting your filters</p>
               </div>
             ) : (
-              <div className="relative h-[600px] max-w-6xl mx-auto animate-fade-in">
+              <div className="relative h-[500px] max-w-6xl mx-auto animate-fade-in z-20 mt-8 mb-12">
                 {filteredStocks.map((stock, index) => (
                   <StockBubble
                     key={stock.id}
@@ -209,7 +209,7 @@ const Index = () => {
           </>
         )}
         
-        <div className="pt-10 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto">
+        <div className="pt-10 px-4 md:px-6 lg:px-8 max-w-7xl mx-auto z-20 relative">
           <div className="mb-6 flex justify-between items-center">
             <h2 className="text-2xl font-bold">Stock List</h2>
             <Tabs defaultValue="all" className="w-fit">
