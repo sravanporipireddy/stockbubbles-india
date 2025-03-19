@@ -22,8 +22,8 @@ const Header: React.FC<HeaderProps> = ({ toggleSidebar }) => {
   return (
     <header 
       className={cn(
-        "fixed top-0 left-0 right-0 z-50 py-4 px-6 transition-all duration-300 animate-slide-down",
-        scrolled ? "bg-white/95 backdrop-blur-md shadow-subtle" : "bg-white/90 backdrop-blur-md"
+        "fixed top-0 left-0 right-0 z-[999] py-4 px-6 transition-all duration-300 animate-slide-down",
+        scrolled ? "bg-white shadow-subtle" : "bg-white/95 backdrop-blur-md"
       )}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between">

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { IndianRupee, TrendingUp, TrendingDown } from 'lucide-react';
@@ -13,7 +14,7 @@ interface StockBubbleProps {
   stock: Stock;
   maxMarketCap: number;
   onClick: (stock: Stock) => void;
-  index: number; // Added index prop for staggered animation
+  index: number; // For staggered animation
 }
 
 const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick, index }) => {
@@ -32,34 +33,32 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick,
   
   const idHash = hashCode(stock.id);
   
-  // Adjust bubble size calculation for better visual appearance
+  // Calculate bubble size based on market cap
   const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap);
   const bubbleColor = getBubbleColor(stock.changePercent);
   const isPositive = stock.changePercent > 0;
   
-  // Create more distributed initial positions
-  const containerWidth = window.innerWidth * 0.8; // 80% of window width
-  const containerHeight = 400; // Reduced height of container for better visibility
+  // Define container dimensions and positioning
+  // D3-inspired positioning with circular arrangement
+  const containerWidth = window.innerWidth * 0.8; 
+  const containerHeight = 400;
   
-  // Key change: Use the hash for horizontal distribution only, but control vertical distribution
-  // This creates a pseudorandom but deterministic horizontal distribution
-  const baseX = (idHash % 100) / 100; // Value between 0-1
-  const baseY = ((idHash >> 10) % 100) / 100; // Different bit range for Y
+  // Calculate position using a circular arrangement similar to the D3 approach
+  // This distributes bubbles in a more organized way
+  const angle = (idHash % 360) * (Math.PI / 180);
+  const radius = Math.min(containerWidth, containerHeight) * 0.35;
   
-  // Calculate position as percentage of container but keep Y values in the lower part
-  const posXPercent = baseX * 0.8 + 0.1; // 10% to 90% of width
+  // Position the bubble in a circular pattern from the center
+  let posX = Math.cos(angle) * radius;
+  let posY = Math.sin(angle) * radius;
   
-  // Ensure bubbles are positioned in the visible area of the container
-  // This keeps all bubbles visible in the container and not behind the header
-  const posYPercent = (baseY * 0.7) + 0.15; // 15% to 85% of height
+  // Add some slight randomness based on hash to avoid perfect circle
+  posX += ((idHash % 50) - 25) * 0.8;
+  posY += ((idHash >> 8) % 50 - 25) * 0.8;
   
-  // Convert to pixels but now centered in the container
-  const posX = (posXPercent * containerWidth) - (containerWidth / 2);
-  const posY = (posYPercent * containerHeight) - (containerHeight / 2);
-  
-  // Create varied floating animations
-  const floatXAmp = ((idHash % 30) - 15) * 0.7; // -10.5 to 10.5px horizontal float
-  const floatYAmp = ((idHash % 40) - 20) * 0.6; // -12 to 12px vertical float
+  // Create varied floating animations for natural movement
+  const floatXAmp = ((idHash % 30) - 15) * 0.7; // Horizontal float
+  const floatYAmp = ((idHash % 40) - 20) * 0.6; // Vertical float
   
   // Animation durations and delays (in seconds)
   const floatDuration = 2 + ((idHash % 25) / 10); // 2-4.5s
@@ -107,19 +106,22 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick,
       style={{ 
         width: bubbleSize, 
         height: bubbleSize,
-        zIndex: isHovering ? 50 : 30 // Increased z-index to make sure bubbles appear on top
+        zIndex: isHovering ? 100 : 50,
+        left: '50%',
+        top: '50%',
+        transform: 'translate(-50%, -50%)' // Center the container
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onClick={() => onClick(stock)}
       whileHover={{ 
         scale: 1.15, 
-        zIndex: 50, 
+        zIndex: 100, 
         transition: { duration: 0.2 } 
       }}
     >
       <motion.div 
-        className={`absolute inset-0 rounded-full flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-2`}
+        className={`absolute inset-0 rounded-full flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-2 shadow-lg`}
         animate={{ 
           boxShadow: isHovering 
             ? '0 0 0 3px rgba(255,255,255,0.6), 0 8px 25px rgba(0,0,0,0.3)' 

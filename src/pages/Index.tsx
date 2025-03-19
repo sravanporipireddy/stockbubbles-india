@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import SearchBar from '@/components/SearchBar';
@@ -195,7 +194,7 @@ const Index = () => {
                 <p className="text-muted-foreground">Try adjusting your filters</p>
               </div>
             ) : (
-              <div className="relative h-[450px] max-w-6xl mx-auto animate-fade-in z-30 mt-6 mb-12 border-0">
+              <div className="relative h-[450px] max-w-6xl mx-auto animate-fade-in z-30 mt-12 mb-16 border border-transparent">
                 {filteredStocks.map((stock, index) => (
                   <StockBubble
                     key={stock.id}
