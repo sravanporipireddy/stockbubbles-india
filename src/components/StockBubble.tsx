@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { IndianRupee, TrendingUp, TrendingDown } from 'lucide-react';
@@ -39,19 +38,22 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick,
   const isPositive = stock.changePercent > 0;
   
   // Create more distributed initial positions
-  const containerWidth = window.innerWidth * 0.9; // 90% of window width
-  const containerHeight = 450; // Reduced height of the container
+  const containerWidth = window.innerWidth * 0.8; // 80% of window width
+  const containerHeight = 400; // Reduced height of container for better visibility
   
-  // Use the hash and some math to distribute bubbles throughout the container
-  // This creates a pseudorandom but deterministic distribution
+  // Key change: Use the hash for horizontal distribution only, but control vertical distribution
+  // This creates a pseudorandom but deterministic horizontal distribution
   const baseX = (idHash % 100) / 100; // Value between 0-1
   const baseY = ((idHash >> 10) % 100) / 100; // Different bit range for Y
   
-  // Calculate position as percentage of container
+  // Calculate position as percentage of container but keep Y values in the lower part
   const posXPercent = baseX * 0.8 + 0.1; // 10% to 90% of width
-  const posYPercent = baseY * 0.8 + 0.1; // 10% to 90% of height
   
-  // Convert to pixels
+  // Ensure bubbles are positioned in the visible area of the container
+  // This keeps all bubbles visible in the container and not behind the header
+  const posYPercent = (baseY * 0.7) + 0.15; // 15% to 85% of height
+  
+  // Convert to pixels but now centered in the container
   const posX = (posXPercent * containerWidth) - (containerWidth / 2);
   const posY = (posYPercent * containerHeight) - (containerHeight / 2);
   
@@ -105,7 +107,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({ stock, maxMarketCap, onClick,
       style={{ 
         width: bubbleSize, 
         height: bubbleSize,
-        zIndex: isHovering ? 50 : 20 // Increased z-index further
+        zIndex: isHovering ? 50 : 30 // Increased z-index to make sure bubbles appear on top
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
