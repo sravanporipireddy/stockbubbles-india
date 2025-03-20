@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { IndianRupee, TrendingUp, TrendingDown } from 'lucide-react';
 import { 
@@ -38,7 +38,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
   const containerWidth = Math.min(window.innerWidth * 0.9, 1200);
   const containerHeight = 700; // Increased height for more space
 
-  // Generate a deterministic position based on index
+  // Generate a position using the improved spiral algorithm
   const position = generateBubblePosition(
     index,
     allStocks.length,
@@ -47,13 +47,13 @@ const StockBubble: React.FC<StockBubbleProps> = ({
     bubbleSize
   );
   
-  // Create fixed floating animations for natural movement
+  // Create subtle floating animations for natural movement
   // Using index to create deterministic but varied animations
   const floatDuration = 3 + (index % 5); // 3-7s duration
   const floatDelay = (index % 10) * 0.2; // 0-1.8s delay
   
   // Much smaller floating distance
-  const floatDistance = 4 + (index % 5); // 4-8px maximum movement
+  const floatDistance = 3 + (index % 3); // 3-5px maximum movement
   
   return (
     <motion.div
@@ -62,14 +62,10 @@ const StockBubble: React.FC<StockBubbleProps> = ({
       initial={{ 
         scale: 0,
         opacity: 0,
-        x: position.x,
-        y: position.y,
       }}
       animate={{ 
         scale: 1, 
         opacity: 1,
-        x: position.x,
-        y: position.y,
       }}
       transition={{ 
         type: "spring",
@@ -83,9 +79,9 @@ const StockBubble: React.FC<StockBubbleProps> = ({
         height: bubbleSize,
         zIndex: isHovering ? 100 : 50,
         position: 'absolute',
-        left: 0,
-        top: 0,
-        transform: `translate(${position.x}px, ${position.y}px) translate(-50%, -50%)` // Use transform instead of x/y for more stability
+        left: position.x,
+        top: position.y,
+        transform: `translate(-50%, -50%)` // Center the bubble
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}

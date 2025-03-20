@@ -45,19 +45,21 @@ export const getBubbleColor = (changePercent: number): string => {
 // Improved function to determine bubble size based on market cap
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
   // Create a more obvious size variation with a wider range
-  const minSize = 35; // Minimum bubble size
-  const maxSize = 80; // Maximum bubble size
+  const minSize = 30; // Minimum bubble size
+  const maxSize = 100; // Maximum bubble size - increased for more variation
   
   // Apply logarithmic scaling for better size distribution
   const logMarketCap = Math.log(marketCap + 1);
   const logMaxMarketCap = Math.log(maxMarketCap + 1);
   const sizeRatio = logMarketCap / logMaxMarketCap;
   
-  // Deterministic size calculation (removed random factor)
-  return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio));
+  // Add small variance factor based on the stock's market cap to avoid identical sizes
+  const variance = ((marketCap % 1000) / 1000) * 10; // Creates a small deterministic variance
+  
+  return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio + variance));
 };
 
-// Generate deterministic positions for bubbles based on index
+// Generate more natural, less grid-like positions for bubbles
 export const generateBubblePosition = (
   index: number, 
   totalBubbles: number, 
@@ -65,30 +67,37 @@ export const generateBubblePosition = (
   containerHeight: number, 
   bubbleSize: number
 ): { x: number, y: number } => {
-  // Calculate grid dimensions based on the square root of total bubbles
-  const gridSize = Math.ceil(Math.sqrt(totalBubbles));
-  const cellWidth = containerWidth / gridSize;
-  const cellHeight = containerHeight / gridSize;
-
-  // Calculate row and column based on index
-  const row = Math.floor(index / gridSize);
-  const col = index % gridSize;
-
-  // Calculate the center position of the cell
-  const x = col * cellWidth + cellWidth / 2;
-  const y = row * cellHeight + cellHeight / 2;
+  // Use golden ratio for spiral positioning instead of grid
+  const goldenRatio = 1.618033988749895;
+  const angleStep = 2 * Math.PI * goldenRatio;
   
-  // Add a slight offset based on position to avoid perfect alignment
-  // Using a deterministic offset based on index
-  const offsetFactor = ((index * 13) % 100) / 100; // Between 0 and 1, deterministic
-  const offsetX = (offsetFactor - 0.5) * (cellWidth * 0.5);
-  const offsetY = ((offsetFactor * 1.7) % 1 - 0.5) * (cellHeight * 0.5);
+  // Calculate radius based on index and total bubbles
+  const radius = bubbleSize + (Math.sqrt(index) * containerWidth * 0.15);
   
-  // Return position with constraints to ensure bubbles stay within container
-  return {
-    x: Math.max(bubbleSize / 2, Math.min(containerWidth - bubbleSize / 2, x + offsetX)),
-    y: Math.max(bubbleSize / 2, Math.min(containerHeight - bubbleSize / 2, y + offsetY))
-  };
+  // Calculate angle using golden ratio for natural distribution
+  const angle = index * angleStep;
+  
+  // Calculate center point of the container
+  const centerX = containerWidth / 2;
+  const centerY = containerHeight / 2;
+  
+  // Calculate position from center
+  let x = centerX + radius * Math.cos(angle);
+  let y = centerY + radius * Math.sin(angle);
+  
+  // Add a small deterministic offset based on market cap
+  const offsetX = ((index * 17) % 100 - 50) * 0.8;
+  const offsetY = ((index * 23) % 100 - 50) * 0.8;
+  
+  x += offsetX;
+  y += offsetY;
+  
+  // Ensure bubbles stay within container with padding
+  const padding = bubbleSize / 2;
+  x = Math.max(padding, Math.min(containerWidth - padding, x));
+  y = Math.max(padding, Math.min(containerHeight - padding, y));
+  
+  return { x, y };
 };
 
 // Function to determine text color based on performance
