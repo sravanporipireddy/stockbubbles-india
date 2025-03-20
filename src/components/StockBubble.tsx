@@ -26,15 +26,15 @@ const StockBubble: React.FC<StockBubbleProps> = ({
 }) => {
   const [isHovering, setIsHovering] = useState(false);
   
-  // Calculate bubble size based on market cap
+  // Calculate bubble size based on market cap using improved algorithm
   const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap);
   const bubbleColor = getBubbleColor(stock.changePercent);
   
-  // Define container dimensions
+  // Define container dimensions - responsive
   const containerWidth = Math.min(window.innerWidth * 0.9, 1200);
   const containerHeight = 700;
 
-  // Generate a position using the improved algorithm
+  // Generate position using D3-inspired algorithm
   const position = generateBubblePosition(
     index,
     allStocks.length,
@@ -43,10 +43,10 @@ const StockBubble: React.FC<StockBubbleProps> = ({
     bubbleSize
   );
   
-  // Create subtle floating animations for natural movement
-  const floatDuration = 4 + (index % 3); // 4-6s duration, reduced variance
-  const floatDelay = (index % 5) * 0.2; // 0-0.8s delay, reduced variance
-  const floatDistance = 2 + (index % 2); // 2-3px maximum movement, reduced range
+  // Smoother floating animation with less movement
+  const floatDuration = 4 + (index % 2); // Less variation (4-5s)
+  const floatDelay = (index % 4) * 0.3; // Staggered delays
+  const floatDistance = 2; // Minimal movement for more stability
   
   return (
     <motion.div
@@ -58,11 +58,13 @@ const StockBubble: React.FC<StockBubbleProps> = ({
       animate={{ 
         scale: 1, 
         opacity: 1,
+        x: position.x,
+        y: position.y,
       }}
       transition={{ 
         type: "spring",
-        stiffness: 50,
-        damping: 20,
+        stiffness: 40,
+        damping: 25,
         delay: 0.01 * index, // Staggered appearance
       }}
       exit={{ scale: 0, opacity: 0 }}
@@ -71,9 +73,9 @@ const StockBubble: React.FC<StockBubbleProps> = ({
         height: bubbleSize,
         zIndex: isHovering ? 100 : 50,
         position: 'absolute',
-        left: position.x,
-        top: position.y,
-        transform: `translate(-50%, -50%)` // Center the bubble
+        left: 0,
+        top: 0,
+        transform: 'translate(-50%, -50%)' // Center the bubble
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}

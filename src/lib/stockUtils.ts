@@ -40,23 +40,22 @@ export const getBubbleColor = (changePercent: number): string => {
   return 'bg-gradient-to-br from-red-500 to-red-700 shadow-md shadow-red-600/20';
 };
 
-// Improved function to determine bubble size based on market cap with more variation
+// Improved function to determine bubble size based on market cap with more natural distribution
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
   const minSize = 40; // Minimum bubble size
-  const maxSize = 120; // Maximum bubble size - increased for more variation
+  const maxSize = 120; // Maximum bubble size
   
-  // Apply logarithmic scaling for better size distribution
-  const logMarketCap = Math.log(marketCap + 1);
-  const logMaxMarketCap = Math.log(maxMarketCap + 1);
-  const sizeRatio = logMarketCap / logMaxMarketCap;
+  // Apply square root scaling for better visual area representation (standard in D3 bubble charts)
+  const sizeRatio = Math.sqrt(marketCap / maxMarketCap);
   
-  // Use the stock's market cap as a seed for deterministic sizing
-  const variance = ((marketCap % 5000) / 5000) * 15; // Creates a larger deterministic variance
+  // Add slight variance based on market cap to avoid exact same sizes
+  const sizeSeed = (marketCap % 10000) / 10000;
+  const variance = sizeSeed * 15;
   
   return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio + variance));
 };
 
-// Improved bubble positioning using force-directed placement
+// D3-inspired bubble packing algorithm - improved positioning
 export const generateBubblePosition = (
   index: number, 
   totalBubbles: number, 
@@ -64,42 +63,29 @@ export const generateBubblePosition = (
   containerHeight: number, 
   bubbleSize: number
 ): { x: number, y: number } => {
-  // Use a combination of spiral and grid for initial positions
-  const columns = Math.ceil(Math.sqrt(totalBubbles * 1.5));
-  const rows = Math.ceil(totalBubbles / columns);
+  // Use a more natural layout based on phi (golden ratio)
+  const phi = (1 + Math.sqrt(5)) / 2;
+  const theta = index * 2 * Math.PI / phi;
   
-  // Get row and column for this index
-  const col = index % columns;
-  const row = Math.floor(index / columns);
+  // Radius increases with index to create spiral effect
+  // Normalized by total bubbles for consistent spacing
+  const normalizedIndex = index / totalBubbles;
+  const radius = normalizedIndex * Math.min(containerWidth, containerHeight) * 0.45;
   
-  // Calculate initial grid-based position with spacing
-  const cellWidth = containerWidth / columns;
-  const cellHeight = containerHeight / rows;
+  // Calculate position based on radius and angle
+  let x = containerWidth / 2 + radius * Math.cos(theta);
+  let y = containerHeight / 2 + radius * Math.sin(theta);
   
-  // Add a controlled offset based on index to break the grid pattern
-  // Use prime numbers for more natural distribution
-  const offsetX = ((index * 17) % 31 - 15) * 3;
-  const offsetY = ((index * 23) % 29 - 14) * 3;
+  // Apply jitter to avoid perfect alignment (more natural looking)
+  const jitterAmount = bubbleSize * 0.3;
+  const jitterX = ((index * 13) % 100) / 100 * jitterAmount - jitterAmount / 2;
+  const jitterY = ((index * 17) % 100) / 100 * jitterAmount - jitterAmount / 2;
   
-  // Calculate final position with a radial bias to create a more circular arrangement
-  const centerBias = 0.3; // How much to bias toward the center (0-1)
-  const centerX = containerWidth / 2;
-  const centerY = containerHeight / 2;
+  x += jitterX;
+  y += jitterY;
   
-  // Base position from grid
-  let x = (col + 0.5) * cellWidth;
-  let y = (row + 0.5) * cellHeight;
-  
-  // Apply center bias
-  x = x * (1 - centerBias) + centerX * centerBias;
-  y = y * (1 - centerBias) + centerY * centerBias;
-  
-  // Apply offset
-  x += offsetX;
-  y += offsetY;
-  
-  // Ensure bubbles stay within container with padding
-  const padding = bubbleSize / 2 + 10; // Added more padding to prevent edge overlap
+  // Ensure bubbles don't go out of bounds
+  const padding = bubbleSize / 2 + 10;
   x = Math.max(padding, Math.min(containerWidth - padding, x));
   y = Math.max(padding, Math.min(containerHeight - padding, y));
   
