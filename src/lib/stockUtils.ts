@@ -45,18 +45,50 @@ export const getBubbleColor = (changePercent: number): string => {
 // Improved function to determine bubble size based on market cap
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
   // Create a more obvious size variation with a wider range
-  const minSize = 30; // Smaller minimum bubble size
-  const maxSize = 90; // Larger maximum bubble size
+  const minSize = 35; // Minimum bubble size
+  const maxSize = 80; // Maximum bubble size
   
-  // Apply logarithmic scaling for better size distribution with more contrast between sizes
+  // Apply logarithmic scaling for better size distribution
   const logMarketCap = Math.log(marketCap + 1);
   const logMaxMarketCap = Math.log(maxMarketCap + 1);
   const sizeRatio = logMarketCap / logMaxMarketCap;
   
-  // Add a small random component to vary sizes even for similar market caps
-  const randomFactor = 0.95 + (Math.random() * 0.1); // Random factor between 0.95 and 1.05
+  // Deterministic size calculation (removed random factor)
+  return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio));
+};
+
+// Generate deterministic positions for bubbles based on index
+export const generateBubblePosition = (
+  index: number, 
+  totalBubbles: number, 
+  containerWidth: number, 
+  containerHeight: number, 
+  bubbleSize: number
+): { x: number, y: number } => {
+  // Calculate grid dimensions based on the square root of total bubbles
+  const gridSize = Math.ceil(Math.sqrt(totalBubbles));
+  const cellWidth = containerWidth / gridSize;
+  const cellHeight = containerHeight / gridSize;
+
+  // Calculate row and column based on index
+  const row = Math.floor(index / gridSize);
+  const col = index % gridSize;
+
+  // Calculate the center position of the cell
+  const x = col * cellWidth + cellWidth / 2;
+  const y = row * cellHeight + cellHeight / 2;
   
-  return Math.max(minSize, Math.min(maxSize, (minSize + (maxSize - minSize) * sizeRatio) * randomFactor));
+  // Add a slight offset based on position to avoid perfect alignment
+  // Using a deterministic offset based on index
+  const offsetFactor = ((index * 13) % 100) / 100; // Between 0 and 1, deterministic
+  const offsetX = (offsetFactor - 0.5) * (cellWidth * 0.5);
+  const offsetY = ((offsetFactor * 1.7) % 1 - 0.5) * (cellHeight * 0.5);
+  
+  // Return position with constraints to ensure bubbles stay within container
+  return {
+    x: Math.max(bubbleSize / 2, Math.min(containerWidth - bubbleSize / 2, x + offsetX)),
+    y: Math.max(bubbleSize / 2, Math.min(containerHeight - bubbleSize / 2, y + offsetY))
+  };
 };
 
 // Function to determine text color based on performance
