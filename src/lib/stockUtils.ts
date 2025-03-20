@@ -1,3 +1,4 @@
+
 import { Stock } from './mockData';
 
 // Function to format large numbers with commas and abbreviations
@@ -41,18 +42,21 @@ export const getBubbleColor = (changePercent: number): string => {
   return 'bg-gradient-to-br from-red-500 to-red-700 shadow-md shadow-red-600/20';
 };
 
-// Function to determine bubble size based on market cap
+// Improved function to determine bubble size based on market cap
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
-  // Use logarithmic scaling for more naturally distributed bubble sizes
-  const minSize = 35; // Smaller minimum bubble size
-  const maxSize = 80; // Smaller maximum bubble size
+  // Create a more obvious size variation with a wider range
+  const minSize = 30; // Smaller minimum bubble size
+  const maxSize = 90; // Larger maximum bubble size
   
-  // Apply logarithmic scaling for better size distribution
+  // Apply logarithmic scaling for better size distribution with more contrast between sizes
   const logMarketCap = Math.log(marketCap + 1);
   const logMaxMarketCap = Math.log(maxMarketCap + 1);
   const sizeRatio = logMarketCap / logMaxMarketCap;
   
-  return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio));
+  // Add a small random component to vary sizes even for similar market caps
+  const randomFactor = 0.95 + (Math.random() * 0.1); // Random factor between 0.95 and 1.05
+  
+  return Math.max(minSize, Math.min(maxSize, (minSize + (maxSize - minSize) * sizeRatio) * randomFactor));
 };
 
 // Function to determine text color based on performance

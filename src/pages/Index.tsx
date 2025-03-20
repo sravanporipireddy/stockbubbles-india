@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import SearchBar from '@/components/SearchBar';
@@ -24,7 +25,6 @@ import {
   SortCriteria,
   SortDirection
 } from '@/lib/stockUtils';
-import { ChartContainer } from '@/components/ui/chart';
 import { TrendingUp, TrendingDown, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import {
   Table,
@@ -194,7 +194,7 @@ const Index = () => {
                 <p className="text-muted-foreground">Try adjusting your filters</p>
               </div>
             ) : (
-              <div className="relative h-[450px] max-w-6xl mx-auto animate-fade-in z-30 mt-12 mb-16 border border-transparent">
+              <div className="relative h-[600px] max-w-6xl mx-auto animate-fade-in z-30 mt-12 mb-16 border-transparent bubble-container">
                 {filteredStocks.map((stock, index) => (
                   <StockBubble
                     key={stock.id}
