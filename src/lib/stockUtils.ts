@@ -1,4 +1,3 @@
-
 import { Stock } from './mockData';
 
 // Function to format large numbers with commas and abbreviations
@@ -33,7 +32,6 @@ export const formatPrice = (price: number): string => {
 
 // Function to determine bubble color based on performance
 export const getBubbleColor = (changePercent: number): string => {
-  // More vibrant color scheme with stronger gradients
   if (changePercent > 5) return 'bg-gradient-to-br from-green-500 to-green-700 shadow-md shadow-green-600/20';
   if (changePercent > 2) return 'bg-gradient-to-br from-green-400 to-green-600 shadow-md shadow-green-500/20';
   if (changePercent > 0) return 'bg-gradient-to-br from-green-300 to-green-500 shadow-md shadow-green-400/20';
@@ -42,24 +40,23 @@ export const getBubbleColor = (changePercent: number): string => {
   return 'bg-gradient-to-br from-red-500 to-red-700 shadow-md shadow-red-600/20';
 };
 
-// Improved function to determine bubble size based on market cap
+// Improved function to determine bubble size based on market cap with more variation
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
-  // Create a more obvious size variation with a wider range
-  const minSize = 30; // Minimum bubble size
-  const maxSize = 100; // Maximum bubble size - increased for more variation
+  const minSize = 40; // Minimum bubble size
+  const maxSize = 120; // Maximum bubble size - increased for more variation
   
   // Apply logarithmic scaling for better size distribution
   const logMarketCap = Math.log(marketCap + 1);
   const logMaxMarketCap = Math.log(maxMarketCap + 1);
   const sizeRatio = logMarketCap / logMaxMarketCap;
   
-  // Add small variance factor based on the stock's market cap to avoid identical sizes
-  const variance = ((marketCap % 1000) / 1000) * 10; // Creates a small deterministic variance
+  // Use the stock's market cap as a seed for deterministic sizing
+  const variance = ((marketCap % 5000) / 5000) * 15; // Creates a larger deterministic variance
   
   return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio + variance));
 };
 
-// Generate more natural, less grid-like positions for bubbles
+// Improved bubble positioning using force-directed placement
 export const generateBubblePosition = (
   index: number, 
   totalBubbles: number, 
@@ -67,33 +64,42 @@ export const generateBubblePosition = (
   containerHeight: number, 
   bubbleSize: number
 ): { x: number, y: number } => {
-  // Use golden ratio for spiral positioning instead of grid
-  const goldenRatio = 1.618033988749895;
-  const angleStep = 2 * Math.PI * goldenRatio;
+  // Use a combination of spiral and grid for initial positions
+  const columns = Math.ceil(Math.sqrt(totalBubbles * 1.5));
+  const rows = Math.ceil(totalBubbles / columns);
   
-  // Calculate radius based on index and total bubbles
-  const radius = bubbleSize + (Math.sqrt(index) * containerWidth * 0.15);
+  // Get row and column for this index
+  const col = index % columns;
+  const row = Math.floor(index / columns);
   
-  // Calculate angle using golden ratio for natural distribution
-  const angle = index * angleStep;
+  // Calculate initial grid-based position with spacing
+  const cellWidth = containerWidth / columns;
+  const cellHeight = containerHeight / rows;
   
-  // Calculate center point of the container
+  // Add a controlled offset based on index to break the grid pattern
+  // Use prime numbers for more natural distribution
+  const offsetX = ((index * 17) % 31 - 15) * 3;
+  const offsetY = ((index * 23) % 29 - 14) * 3;
+  
+  // Calculate final position with a radial bias to create a more circular arrangement
+  const centerBias = 0.3; // How much to bias toward the center (0-1)
   const centerX = containerWidth / 2;
   const centerY = containerHeight / 2;
   
-  // Calculate position from center
-  let x = centerX + radius * Math.cos(angle);
-  let y = centerY + radius * Math.sin(angle);
+  // Base position from grid
+  let x = (col + 0.5) * cellWidth;
+  let y = (row + 0.5) * cellHeight;
   
-  // Add a small deterministic offset based on market cap
-  const offsetX = ((index * 17) % 100 - 50) * 0.8;
-  const offsetY = ((index * 23) % 100 - 50) * 0.8;
+  // Apply center bias
+  x = x * (1 - centerBias) + centerX * centerBias;
+  y = y * (1 - centerBias) + centerY * centerBias;
   
+  // Apply offset
   x += offsetX;
   y += offsetY;
   
   // Ensure bubbles stay within container with padding
-  const padding = bubbleSize / 2;
+  const padding = bubbleSize / 2 + 10; // Added more padding to prevent edge overlap
   x = Math.max(padding, Math.min(containerWidth - padding, x));
   y = Math.max(padding, Math.min(containerHeight - padding, y));
   
