@@ -46,7 +46,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
   // Smoother floating animation with less movement
   const floatDuration = 4 + (index % 2); // Less variation (4-5s)
   const floatDelay = (index % 4) * 0.3; // Staggered delays
-  const floatDistance = 2; // Minimal movement for more stability
+  const floatDistance = 1.5; // Minimal movement for more stability
   
   return (
     <motion.div
@@ -63,7 +63,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
       }}
       transition={{ 
         type: "spring",
-        stiffness: 40,
+        stiffness: 35, // Slightly lower stiffness for smoother motion
         damping: 25,
         delay: 0.01 * index, // Staggered appearance
       }}
