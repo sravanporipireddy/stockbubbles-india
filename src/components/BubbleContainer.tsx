@@ -68,39 +68,58 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     const centerX = containerDimensions.width / 2;
     const centerY = containerDimensions.height / 2;
 
+    // Create a new simulation with stronger prevention of overlaps
     const simulation = d3.forceSimulation<NodeDatum>()
       .nodes(newNodes)
       // Center force pulls bubbles toward the center
       .force('center', d3.forceCenter<NodeDatum>(centerX, centerY))
-      // Collision force prevents bubbles from overlapping
-      .force('collision', d3.forceCollide<NodeDatum>().radius(d => d.r + 10).strength(0.9))
-      // Charge force creates repulsion between bubbles
-      .force('charge', d3.forceManyBody().strength(d => -Math.pow(d.r, 2) * 0.2))
-      // X force keeps bubbles within container width
-      .force('x', d3.forceX<NodeDatum>(centerX).strength(0.07))
-      // Y force keeps bubbles within container height
-      .force('y', d3.forceY<NodeDatum>(centerY).strength(0.07));
+      // Much stronger collision force prevents bubbles from overlapping
+      .force('collision', d3.forceCollide<NodeDatum>()
+        .radius(d => d.r + 15) // Increased padding between bubbles
+        .strength(1)           // Maximum strength (1.0)
+        .iterations(4))        // More iterations for better collision resolution
+      // Stronger charge force creates better repulsion between bubbles
+      .force('charge', d3.forceManyBody()
+        .strength(d => -Math.pow(d.r, 2) * 0.8)) // Increased repulsion
+      // X force keeps bubbles within container width with gentle constraint
+      .force('x', d3.forceX<NodeDatum>(centerX).strength(0.1))
+      // Y force keeps bubbles within container height with gentle constraint
+      .force('y', d3.forceY<NodeDatum>(centerY).strength(0.1));
 
+    // Use a higher alpha (initial energy) and slower decay for better placement
+    simulation.alpha(0.9).alphaDecay(0.02);
+    
     // Update node positions on each tick
     simulation.on('tick', () => {
+      // Apply boundary constraints to keep nodes within the container
+      simulation.nodes().forEach(node => {
+        node.x = Math.max(node.r, Math.min(containerDimensions.width - node.r, node.x || 0));
+        node.y = Math.max(node.r, Math.min(containerDimensions.height - node.r, node.y || 0));
+      });
+      
       setNodes([...simulation.nodes()]);
     });
-
-    // Set alpha target to 0 to gradually cool down the simulation
-    simulation.alpha(1);
     
     // Store simulation in ref to control it later
     simulationRef.current = simulation;
     
-    // Stop the simulation after a certain number of iterations
-    // This will allow the bubbles to find their positions and then stay fixed
+    // Run the simulation with high energy for better initial placement
+    // then stop it completely once bubbles are positioned
     const simulationTimeout = setTimeout(() => {
       if (simulationRef.current) {
-        simulationRef.current.stop();
-        console.log("Simulation stopped - positions fixed");
+        // Intensify the simulation at the end to ensure good layout
+        simulationRef.current.alpha(0.1).alphaTarget(0).alphaDecay(0.05).restart();
+        
+        // Then stop it after a final positioning phase
+        setTimeout(() => {
+          if (simulationRef.current) {
+            simulationRef.current.stop();
+            console.log("Simulation stopped - positions fixed");
+          }
+        }, 1000);
       }
-    }, 2000); // Run simulation for 2 seconds and then stop
-
+    }, 3000); // Allow 3 seconds for initial positioning
+    
     // Clean up simulation on unmount or when stocks change
     return () => {
       clearTimeout(simulationTimeout);

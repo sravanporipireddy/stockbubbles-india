@@ -30,11 +30,6 @@ const StockBubble: React.FC<StockBubbleProps> = ({
   const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap);
   const bubbleColor = getBubbleColor(stock.changePercent);
   
-  // Reduced floating animation with minimal movement
-  const floatDuration = 4 + (index % 3); // Slightly more variation (4-6s)
-  const floatDelay = (index % 5) * 0.2; // More staggered delays
-  const floatDistance = 0.5; // Further reduced movement for stability
-  
   return (
     <motion.div
       className="absolute cursor-pointer stock-bubble"
@@ -79,17 +74,6 @@ const StockBubble: React.FC<StockBubbleProps> = ({
           boxShadow: isHovering 
             ? '0 0 0 3px rgba(255,255,255,0.6), 0 8px 25px rgba(0,0,0,0.3)' 
             : '0 4px 10px rgba(0,0,0,0.15)',
-          y: [0, floatDistance / 2, 0, -floatDistance / 2, 0],
-        }}
-        transition={{
-          y: {
-            repeat: Infinity,
-            repeatType: "loop",
-            duration: floatDuration,
-            ease: "easeInOut",
-            delay: floatDelay,
-            times: [0, 0.25, 0.5, 0.75, 1]
-          }
         }}
       >
         <BubbleContent stock={stock} />
