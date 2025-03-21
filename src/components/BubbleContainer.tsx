@@ -73,27 +73,37 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       // Center force pulls bubbles toward the center
       .force('center', d3.forceCenter<NodeDatum>(centerX, centerY))
       // Collision force prevents bubbles from overlapping
-      .force('collision', d3.forceCollide<NodeDatum>().radius(d => d.r + 5).strength(0.8))
+      .force('collision', d3.forceCollide<NodeDatum>().radius(d => d.r + 10).strength(0.9))
       // Charge force creates repulsion between bubbles
-      .force('charge', d3.forceManyBody().strength(d => -Math.pow(d.r, 2) * 0.1))
+      .force('charge', d3.forceManyBody().strength(d => -Math.pow(d.r, 2) * 0.2))
       // X force keeps bubbles within container width
-      .force('x', d3.forceX<NodeDatum>(centerX).strength(0.05))
+      .force('x', d3.forceX<NodeDatum>(centerX).strength(0.07))
       // Y force keeps bubbles within container height
-      .force('y', d3.forceY<NodeDatum>(centerY).strength(0.05));
+      .force('y', d3.forceY<NodeDatum>(centerY).strength(0.07));
 
     // Update node positions on each tick
     simulation.on('tick', () => {
       setNodes([...simulation.nodes()]);
     });
 
-    // Stop simulation after a certain number of iterations for performance
-    simulation.alpha(1).restart();
+    // Set alpha target to 0 to gradually cool down the simulation
+    simulation.alpha(1);
     
     // Store simulation in ref to control it later
     simulationRef.current = simulation;
+    
+    // Stop the simulation after a certain number of iterations
+    // This will allow the bubbles to find their positions and then stay fixed
+    const simulationTimeout = setTimeout(() => {
+      if (simulationRef.current) {
+        simulationRef.current.stop();
+        console.log("Simulation stopped - positions fixed");
+      }
+    }, 2000); // Run simulation for 2 seconds and then stop
 
-    // Clean up simulation on unmount
+    // Clean up simulation on unmount or when stocks change
     return () => {
+      clearTimeout(simulationTimeout);
       if (simulationRef.current) {
         simulationRef.current.stop();
       }

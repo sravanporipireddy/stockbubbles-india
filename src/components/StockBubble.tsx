@@ -30,10 +30,10 @@ const StockBubble: React.FC<StockBubbleProps> = ({
   const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap);
   const bubbleColor = getBubbleColor(stock.changePercent);
   
-  // Smoother floating animation with minimal movement
+  // Reduced floating animation with minimal movement
   const floatDuration = 4 + (index % 3); // Slightly more variation (4-6s)
   const floatDelay = (index % 5) * 0.2; // More staggered delays
-  const floatDistance = 1.2; // Further reduced movement for stability
+  const floatDistance = 0.5; // Further reduced movement for stability
   
   return (
     <motion.div
