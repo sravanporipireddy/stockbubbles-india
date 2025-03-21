@@ -5,8 +5,7 @@ import { Stock } from '@/lib/mockData';
 import BubbleContent from './BubbleContent';
 import { 
   getBubbleColor, 
-  getBubbleSize, 
-  generateBubblePosition
+  getBubbleSize
 } from '@/lib/stockUtils';
 
 interface StockBubbleProps {
@@ -15,33 +14,21 @@ interface StockBubbleProps {
   onClick: (stock: Stock) => void;
   index: number;
   allStocks: Stock[];
+  position: { x: number, y: number };
 }
 
 const StockBubble: React.FC<StockBubbleProps> = ({ 
   stock, 
   maxMarketCap, 
   onClick, 
-  index, 
-  allStocks 
+  index,
+  position
 }) => {
   const [isHovering, setIsHovering] = useState(false);
   
   // Calculate bubble size based on market cap using improved algorithm
   const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap);
   const bubbleColor = getBubbleColor(stock.changePercent);
-  
-  // Define container dimensions - responsive
-  const containerWidth = Math.min(window.innerWidth * 0.9, 1200);
-  const containerHeight = 700;
-
-  // Generate position using enhanced algorithm
-  const position = generateBubblePosition(
-    index,
-    allStocks.length,
-    containerWidth,
-    containerHeight,
-    bubbleSize
-  );
   
   // Smoother floating animation with minimal movement
   const floatDuration = 4 + (index % 3); // Slightly more variation (4-6s)

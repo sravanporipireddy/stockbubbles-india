@@ -55,45 +55,6 @@ export const getBubbleSize = (marketCap: number, maxMarketCap: number): number =
   return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio + variance));
 };
 
-// Enhanced bubble positioning algorithm with collision avoidance
-export const generateBubblePosition = (
-  index: number, 
-  totalBubbles: number, 
-  containerWidth: number, 
-  containerHeight: number, 
-  bubbleSize: number
-): { x: number, y: number } => {
-  // Use golden ratio for more natural spacing
-  const phi = (1 + Math.sqrt(5)) / 2;
-  const theta = index * 2 * Math.PI / phi;
-  
-  // Use more aggressive cube root to create more space between bubbles
-  const normalizedIndex = Math.pow(index / totalBubbles, 0.5);
-  
-  // Significantly increase the radius multiplier to spread bubbles further apart
-  const radiusMultiplier = 0.70; // Increased from 0.55
-  const radius = normalizedIndex * Math.min(containerWidth, containerHeight) * radiusMultiplier;
-  
-  // Calculate position based on radius and angle
-  let x = containerWidth / 2 + radius * Math.cos(theta);
-  let y = containerHeight / 2 + radius * Math.sin(theta);
-  
-  // Minimal jitter to maintain the spiral pattern
-  const jitterAmount = bubbleSize * 0.15; // Reduced further from 0.2
-  const jitterX = ((index * 13) % 100) / 100 * jitterAmount - jitterAmount / 2;
-  const jitterY = ((index * 17) % 100) / 100 * jitterAmount - jitterAmount / 2;
-  
-  x += jitterX;
-  y += jitterY;
-  
-  // Increase padding to ensure bubbles don't go out of bounds or overlap with edge
-  const padding = bubbleSize / 2 + 20; // Increased from 15
-  x = Math.max(padding, Math.min(containerWidth - padding, x));
-  y = Math.max(padding, Math.min(containerHeight - padding, y));
-  
-  return { x, y };
-};
-
 // Function to determine text color based on performance
 export const getTextColor = (changePercent: number): string => {
   if (changePercent > 0) return 'text-profit';
