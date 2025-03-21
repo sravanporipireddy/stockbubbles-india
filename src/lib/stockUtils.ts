@@ -1,4 +1,3 @@
-
 import { Stock } from './mockData';
 
 // Function to format large numbers with commas and abbreviations
@@ -56,7 +55,7 @@ export const getBubbleSize = (marketCap: number, maxMarketCap: number): number =
   return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio + variance));
 };
 
-// Improved D3-inspired bubble packing algorithm with collision detection
+// Enhanced bubble positioning algorithm with collision avoidance
 export const generateBubblePosition = (
   index: number, 
   totalBubbles: number, 
@@ -64,34 +63,31 @@ export const generateBubblePosition = (
   containerHeight: number, 
   bubbleSize: number
 ): { x: number, y: number } => {
-  // Use a more natural layout based on phi (golden ratio)
+  // Use golden ratio for more natural spacing
   const phi = (1 + Math.sqrt(5)) / 2;
   const theta = index * 2 * Math.PI / phi;
   
-  // Make radius increases more gradual with index to create spiral effect
-  // Use cube root for more spacing between bubbles as we move outward
-  const normalizedIndex = Math.pow(index / totalBubbles, 0.6);
+  // Use more aggressive cube root to create more space between bubbles
+  const normalizedIndex = Math.pow(index / totalBubbles, 0.5);
   
-  // Increase the radius multiplier to spread bubbles further apart
-  // Use a larger multiplier for bigger container dimensions
-  const radiusMultiplier = 0.55; // Increased from 0.45
+  // Significantly increase the radius multiplier to spread bubbles further apart
+  const radiusMultiplier = 0.70; // Increased from 0.55
   const radius = normalizedIndex * Math.min(containerWidth, containerHeight) * radiusMultiplier;
   
   // Calculate position based on radius and angle
   let x = containerWidth / 2 + radius * Math.cos(theta);
   let y = containerHeight / 2 + radius * Math.sin(theta);
   
-  // Apply smaller jitter to maintain the spiral pattern while avoiding predictability
-  const jitterAmount = bubbleSize * 0.2; // Reduced from 0.3
+  // Minimal jitter to maintain the spiral pattern
+  const jitterAmount = bubbleSize * 0.15; // Reduced further from 0.2
   const jitterX = ((index * 13) % 100) / 100 * jitterAmount - jitterAmount / 2;
   const jitterY = ((index * 17) % 100) / 100 * jitterAmount - jitterAmount / 2;
   
   x += jitterX;
   y += jitterY;
   
-  // Ensure bubbles don't go out of bounds
-  // Add more padding for larger bubbles
-  const padding = bubbleSize / 2 + 15; // Increased from 10
+  // Increase padding to ensure bubbles don't go out of bounds or overlap with edge
+  const padding = bubbleSize / 2 + 20; // Increased from 15
   x = Math.max(padding, Math.min(containerWidth - padding, x));
   y = Math.max(padding, Math.min(containerHeight - padding, y));
   

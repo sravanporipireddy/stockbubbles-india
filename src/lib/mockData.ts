@@ -29,7 +29,7 @@ const generateMarketCap = (price: number): number => {
   return Math.round(price * factor * 1000000);
 };
 
-// Base stocks with initial prices
+// Base stocks with initial prices - expanded list
 const baseStocks: Omit<Stock, 'previousPrice' | 'change' | 'changePercent' | 'marketCap' | 'volume'>[] = [
   { id: '1', symbol: 'RELIANCE', name: 'Reliance Industries', price: 2584, sector: 'Oil & Gas' },
   { id: '2', symbol: 'TCS', name: 'Tata Consultancy Services', price: 3456, sector: 'IT' },
@@ -81,6 +81,36 @@ const baseStocks: Omit<Stock, 'previousPrice' | 'change' | 'changePercent' | 'ma
   { id: '48', symbol: 'APOLLOHOSP', name: 'Apollo Hospitals', price: 5243, sector: 'Healthcare' },
   { id: '49', symbol: 'SBILIFE', name: 'SBI Life Insurance', price: 1356, sector: 'Insurance' },
   { id: '50', symbol: 'ZOMATO', name: 'Zomato', price: 146, sector: 'Technology' },
+  { id: '51', symbol: 'INDIGOPNTS', name: 'Indigo Paints', price: 1432, sector: 'Consumer Goods' },
+  { id: '52', symbol: 'LICI', name: 'Life Insurance Corporation', price: 845, sector: 'Insurance' },
+  { id: '53', symbol: 'MARICO', name: 'Marico', price: 543, sector: 'FMCG' },
+  { id: '54', symbol: 'BERGEPAINT', name: 'Berger Paints', price: 678, sector: 'Consumer Goods' },
+  { id: '55', symbol: 'JUBLFOOD', name: 'Jubilant FoodWorks', price: 478, sector: 'Food & Beverages' },
+  { id: '56', symbol: 'HAVELLS', name: 'Havells India', price: 1365, sector: 'Consumer Goods' },
+  { id: '57', symbol: 'DABUR', name: 'Dabur India', price: 543, sector: 'FMCG' },
+  { id: '58', symbol: 'PIDILITIND', name: 'Pidilite Industries', price: 2543, sector: 'Chemicals' },
+  { id: '59', symbol: 'GODREJCP', name: 'Godrej Consumer Products', price: 978, sector: 'FMCG' },
+  { id: '60', symbol: 'COLPAL', name: 'Colgate-Palmolive', price: 1678, sector: 'FMCG' },
+  { id: '61', symbol: 'SIEMENS', name: 'Siemens', price: 3245, sector: 'Capital Goods' },
+  { id: '62', symbol: 'BOSCHLTD', name: 'Bosch', price: 19876, sector: 'Auto Components' },
+  { id: '63', symbol: 'ABBOTINDIA', name: 'Abbott India', price: 23456, sector: 'Pharmaceutical' },
+  { id: '64', symbol: 'DLF', name: 'DLF', price: 543, sector: 'Real Estate' },
+  { id: '65', symbol: 'BAJAJHLDNG', name: 'Bajaj Holdings', price: 7654, sector: 'Finance' },
+  { id: '66', symbol: 'MPHASIS', name: 'Mphasis', price: 2345, sector: 'IT' },
+  { id: '67', symbol: 'LTIM', name: 'LTI Mindtree', price: 5432, sector: 'IT' },
+  { id: '68', symbol: 'TIINDIA', name: 'Tube Investments', price: 3456, sector: 'Engineering' },
+  { id: '69', symbol: 'PERSISTENT', name: 'Persistent Systems', price: 4567, sector: 'IT' },
+  { id: '70', symbol: 'COFORGE', name: 'Coforge', price: 5432, sector: 'IT' },
+  { id: '71', symbol: 'PFC', name: 'Power Finance Corporation', price: 234, sector: 'Finance' },
+  { id: '72', symbol: 'RECLTD', name: 'REC Limited', price: 245, sector: 'Finance' },
+  { id: '73', symbol: 'IRCTC', name: 'Indian Railway Catering', price: 678, sector: 'Services' },
+  { id: '74', symbol: 'BHARATFORG', name: 'Bharat Forge', price: 1098, sector: 'Auto Components' },
+  { id: '75', symbol: 'TORNTPHARM', name: 'Torrent Pharmaceuticals', price: 1987, sector: 'Pharmaceutical' },
+  { id: '76', symbol: 'LUPIN', name: 'Lupin', price: 1156, sector: 'Pharmaceutical' },
+  { id: '77', symbol: 'PAGEIND', name: 'Page Industries', price: 37896, sector: 'Textiles' },
+  { id: '78', symbol: 'NYKAA', name: 'FSN E-Commerce (Nykaa)', price: 178, sector: 'Retail' },
+  { id: '79', symbol: 'POLICYBZR', name: 'PB Fintech (PolicyBazaar)', price: 765, sector: 'Finance' },
+  { id: '80', symbol: 'PAYTM', name: 'One97 Communications', price: 543, sector: 'Technology' }
 ];
 
 // Initialize stocks with calculated values
@@ -158,5 +188,14 @@ export const stockSectors = [
   'Insurance', 
   'Agrochemicals', 
   'Healthcare', 
-  'Technology'
+  'Technology',
+  'Food & Beverages',
+  'Chemicals',
+  'Capital Goods',
+  'Auto Components',
+  'Real Estate',
+  'Engineering',
+  'Services',
+  'Textiles',
+  'Retail'
 ];

@@ -14,7 +14,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const maxMarketCap = getMaxMarketCap(stocks);
   const [containerDimensions, setContainerDimensions] = useState({
     width: Math.min(window.innerWidth * 0.9, 1200),
-    height: 700
+    height: 800 // Increased from 700 to provide more space
   });
   
   // Handle window resize to maintain responsive layout
@@ -22,7 +22,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     const handleResize = () => {
       setContainerDimensions({
         width: Math.min(window.innerWidth * 0.9, 1200),
-        height: 700
+        height: 800 // Increased height
       });
     };
     
@@ -32,7 +32,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   
   return (
     <motion.div 
-      className="relative h-[700px] max-w-6xl mx-auto animate-fade-in z-30 mt-12 mb-16 border-transparent bubble-container"
+      className="relative h-[800px] max-w-6xl mx-auto animate-fade-in z-30 mt-12 mb-16 border-transparent bubble-container"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}

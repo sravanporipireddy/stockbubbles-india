@@ -34,7 +34,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
   const containerWidth = Math.min(window.innerWidth * 0.9, 1200);
   const containerHeight = 700;
 
-  // Generate position using D3-inspired algorithm
+  // Generate position using enhanced algorithm
   const position = generateBubblePosition(
     index,
     allStocks.length,
@@ -43,10 +43,10 @@ const StockBubble: React.FC<StockBubbleProps> = ({
     bubbleSize
   );
   
-  // Smoother floating animation with less movement
-  const floatDuration = 4 + (index % 2); // Less variation (4-5s)
-  const floatDelay = (index % 4) * 0.3; // Staggered delays
-  const floatDistance = 1.5; // Minimal movement for more stability
+  // Smoother floating animation with minimal movement
+  const floatDuration = 4 + (index % 3); // Slightly more variation (4-6s)
+  const floatDelay = (index % 5) * 0.2; // More staggered delays
+  const floatDistance = 1.2; // Further reduced movement for stability
   
   return (
     <motion.div
@@ -63,7 +63,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
       }}
       transition={{ 
         type: "spring",
-        stiffness: 35, // Slightly lower stiffness for smoother motion
+        stiffness: 30, // Lower stiffness for smoother motion
         damping: 25,
         delay: 0.01 * index, // Staggered appearance
       }}
