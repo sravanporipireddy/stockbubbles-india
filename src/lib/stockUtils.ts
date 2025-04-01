@@ -1,5 +1,6 @@
 
 import { Stock } from './mockData';
+import { NseIndia } from 'stock-nse-india';
 
 // Function to format large numbers with commas and abbreviations
 export const formatNumber = (num: number): string => {
@@ -117,4 +118,120 @@ export const sortStocks = (
 // Function to determine the max market cap in the stock list
 export const getMaxMarketCap = (stocks: Stock[]): number => {
   return Math.max(...stocks.map(stock => stock.marketCap));
+};
+
+// Create an instance of the NSE India API client
+const nseApi = new NseIndia();
+
+// Function to fetch all stock data from NSE
+export const fetchNseStocks = async (): Promise<Stock[]> => {
+  try {
+    // Get equity list first
+    const equityList = await nseApi.getEquityList();
+    
+    // Create a set of stock symbols for which we need detailed data
+    const stockSymbols = equityList.slice(0, 100).map(stock => stock.symbol);
+    
+    // Get sector information
+    const sectorMap = new Map<string, string>();
+    const indices = await nseApi.getIndices();
+    
+    // We'll use Nifty sectoral indices to determine sectors when possible
+    for (const index of indices) {
+      if (index.index.includes("NIFTY") && index.index.includes("SECTOR")) {
+        const sectorName = index.index.replace("NIFTY ", "").replace(" SECTOR", "");
+        const stockList = await nseApi.getIndexStocks(index.indexSymbol);
+        stockList.forEach(stock => {
+          sectorMap.set(stock.symbol, sectorName);
+        });
+      }
+    }
+    
+    // Fetch detailed stock data for each symbol (in batches to avoid rate limiting)
+    const batchSize = 10; // Process 10 stocks at a time
+    const allStocks: Stock[] = [];
+    
+    for (let i = 0; i < stockSymbols.length; i += batchSize) {
+      const batch = stockSymbols.slice(i, i + batchSize);
+      const batchPromises = batch.map(async (symbol) => {
+        try {
+          const stockDetails = await nseApi.getEquityDetails(symbol);
+          const equityInfo = equityList.find(s => s.symbol === symbol);
+          
+          if (stockDetails && equityInfo) {
+            return {
+              id: symbol,
+              symbol: symbol,
+              name: equityInfo.name || symbol,
+              price: stockDetails.priceInfo.lastPrice,
+              changePercent: stockDetails.priceInfo.pChange,
+              marketCap: stockDetails.securityInfo.marketCap || 1000000, // Default if not available
+              volume: stockDetails.priceInfo.totalTradedVolume || 0,
+              sector: sectorMap.get(symbol) || "Other",
+              pe: stockDetails.securityInfo.peBand?.min || 0,
+              high52: stockDetails.priceInfo.weekHighLow.fiftyTwoWeekHigh,
+              low52: stockDetails.priceInfo.weekHighLow.fiftyTwoWeekLow,
+            };
+          }
+          return null;
+        } catch (error) {
+          console.error(`Error fetching details for ${symbol}:`, error);
+          return null;
+        }
+      });
+      
+      const batchResults = await Promise.all(batchPromises);
+      allStocks.push(...batchResults.filter(Boolean) as Stock[]);
+      
+      // Add a small delay between batches to avoid rate limiting
+      if (i + batchSize < stockSymbols.length) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+    }
+    
+    return allStocks;
+  } catch (error) {
+    console.error("Error fetching NSE stocks:", error);
+    throw error;
+  }
+};
+
+// Function to fetch key indices data
+export const fetchNseIndices = async () => {
+  try {
+    const indices = await nseApi.getIndices();
+    return indices
+      .filter(index => 
+        ["NIFTY 50", "NIFTY BANK", "NIFTY NEXT 50", "INDIA VIX"].includes(index.index)
+      )
+      .map(index => ({
+        name: index.index,
+        value: index.last,
+        changePercent: index.percentChange
+      }));
+  } catch (error) {
+    console.error("Error fetching NSE indices:", error);
+    throw error;
+  }
+};
+
+// Function to fetch sector performance
+export const fetchNseSectorPerformance = async () => {
+  try {
+    const indices = await nseApi.getIndices();
+    return indices
+      .filter(index => 
+        index.index.includes("NIFTY") && index.index.includes("SECTOR")
+      )
+      .map(index => {
+        const sectorName = index.index.replace("NIFTY ", "").replace(" SECTOR", "");
+        return {
+          name: sectorName,
+          performance: index.percentChange
+        };
+      });
+  } catch (error) {
+    console.error("Error fetching NSE sector performance:", error);
+    throw error;
+  }
 };
