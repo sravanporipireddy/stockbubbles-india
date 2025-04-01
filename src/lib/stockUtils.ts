@@ -1,4 +1,3 @@
-
 import { Stock } from './mockData';
 import { NseIndia } from 'stock-nse-india';
 import '../lib/polyfills';
@@ -127,23 +126,22 @@ const nseApi = new NseIndia();
 // Function to fetch all stock data from NSE
 export const fetchNseStocks = async (): Promise<Stock[]> => {
   try {
-    // Get all stocks - using the correct method from the API
-    const equities = await nseApi.getEquitySymbols();
+    // Get all stocks - using the available method from the stock-nse-india package
+    const equities = await nseApi.getAllStockSymbols();
     
     // Create a set of stock symbols for which we need detailed data
     const stockSymbols = equities.slice(0, 100);
     
     // Get sector information
     const sectorMap = new Map<string, string>();
-    const indices = await nseApi.getIndices();
+    const indices = await nseApi.getIndicesStocksList();
     
     // We'll use Nifty sectoral indices to determine sectors when possible
     for (const index of indices) {
       if (index.index.includes("NIFTY") && index.index.includes("SECTOR")) {
         const sectorName = index.index.replace("NIFTY ", "").replace(" SECTOR", "");
         try {
-          // The API doesn't have getIndexComposition, use another approach
-          // Just assign a default sector based on the index name for now
+          // Assign a default sector based on the index name for now
           stockSymbols.forEach(stock => {
             // Only set if not already set
             if (!sectorMap.has(stock)) {
@@ -167,9 +165,9 @@ export const fetchNseStocks = async (): Promise<Stock[]> => {
       const batch = stockSymbols.slice(i, i + batchSize);
       const batchPromises = batch.map(async (symbol) => {
         try {
-          const stockDetails = await nseApi.getEquityDetails(symbol);
-          // Use getQuoteInfo instead of getEquityQuote
-          const quote = await nseApi.getQuoteInfo(symbol);
+          const stockDetails = await nseApi.getStockDetails(symbol);
+          // Use getStockQuote instead of getEquityQuote
+          const quote = await nseApi.getStockQuote(symbol);
           
           if (stockDetails && quote) {
             // Create a stock object that matches the Stock type from mockData
@@ -184,9 +182,8 @@ export const fetchNseStocks = async (): Promise<Stock[]> => {
               marketCap: (quote.securityInfo?.issuedSize || 0) * (quote.priceInfo?.lastPrice || 0),
               volume: quote.priceInfo?.totalTradedVolume || 0,
               sector: sectorMap.get(symbol) || "Other",
-              pe: quote.metadata?.pdSymbolPe || 0,
               high52: quote.priceInfo?.weekHighLow?.yearHigh || 0,
-              low52: quote.priceInfo?.weekHighLow?.yearLow || 0,
+              low52: quote.priceInfo?.weekHighLow?.yearLow || 0
             };
             return stock;
           }
@@ -216,7 +213,7 @@ export const fetchNseStocks = async (): Promise<Stock[]> => {
 // Function to fetch key indices data
 export const fetchNseIndices = async () => {
   try {
-    const indices = await nseApi.getIndices();
+    const indices = await nseApi.getIndicesStocksList();
     return indices
       .filter(index => 
         ["NIFTY 50", "NIFTY BANK", "NIFTY NEXT 50", "INDIA VIX"].includes(index.index)
@@ -232,10 +229,10 @@ export const fetchNseIndices = async () => {
   }
 };
 
-// Function to fetch sector performance - ensuring it returns data with the same structure as expected in Index.tsx
+// Function to fetch sector performance - ensuring it returns data with the same structure
 export const fetchNseSectorPerformance = async () => {
   try {
-    const indices = await nseApi.getIndices();
+    const indices = await nseApi.getIndicesStocksList();
     return indices
       .filter(index => 
         index.index.includes("NIFTY") && index.index.includes("SECTOR")

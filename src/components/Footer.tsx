@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,9 +16,10 @@ interface FooterProps {
     value: number;
     changePercent: number;
   }[];
+  usingRealData: boolean;
 }
 
-const Footer: React.FC<FooterProps> = ({ sectorPerformance, indexData }) => {
+const Footer: React.FC<FooterProps> = ({ sectorPerformance, indexData, usingRealData }) => {
   return (
     <motion.footer 
       className="w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-800 py-4 px-4 md:px-6"
