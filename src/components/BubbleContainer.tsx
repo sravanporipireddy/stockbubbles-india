@@ -25,7 +25,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const [nodes, setNodes] = useState<NodeDatum[]>([]);
   const simulationRef = useRef<d3.Simulation<NodeDatum, undefined> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [layoutComplete, setLayoutComplete] = useState(false);
+  const [initialLayoutComplete, setInitialLayoutComplete] = useState(false);
   
   const [containerDimensions, setContainerDimensions] = useState({
     width: Math.min(window.innerWidth * 0.9, 1200),
@@ -35,23 +35,23 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      // Only update dimensions if layout is not complete to prevent re-positioning
-      if (!layoutComplete) {
+      if (containerRef.current) {
+        const { width } = containerRef.current.getBoundingClientRect();
         setContainerDimensions({
-          width: Math.min(window.innerWidth * 0.9, 1200),
+          width,
           height: 800
         });
       }
     };
     
     window.addEventListener('resize', handleResize);
+    handleResize();
     return () => window.removeEventListener('resize', handleResize);
-  }, [layoutComplete]);
+  }, []);
 
-  // Initialize simulation when stocks change and layout is not complete
+  // Create and run the simulation only once on initial render
   useEffect(() => {
-    // Skip simulation if layout is already complete or no stocks
-    if (layoutComplete || stocks.length === 0) {
+    if (initialLayoutComplete || stocks.length === 0) {
       if (stocks.length === 0) {
         setNodes([]);
       }
@@ -66,74 +66,54 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         index,
         r,
         stock,
-        // Initialize with random positions to avoid all starting at center
+        // Initialize with random positions within container
         x: Math.random() * containerDimensions.width,
         y: Math.random() * containerDimensions.height
       };
     });
 
-    // Set up the simulation
-    const centerX = containerDimensions.width / 2;
-    const centerY = containerDimensions.height / 2;
-
-    // Create a fixed positions simulation that won't run continuously
+    // Set up the simulation configuration (similar to @testboxlab/react-bubble-chart-d3)
     const simulation = d3.forceSimulation<NodeDatum>()
       .nodes(newNodes)
-      .force('center', d3.forceCenter<NodeDatum>(centerX, centerY))
-      .force('collision', d3.forceCollide<NodeDatum>()
-        .radius(d => d.r + 20) // Increased padding between bubbles
-        .strength(1)           // Maximum strength for collision prevention
-        .iterations(5))        // More iterations for better collision resolution
-      .force('charge', d3.forceManyBody()
-        .strength(d => -Math.pow(d.r, 2) * 1)) // Strong repulsion
-      .force('x', d3.forceX<NodeDatum>(centerX).strength(0.1))
-      .force('y', d3.forceY<NodeDatum>(centerY).strength(0.1));
+      .alpha(1) // Start with high energy
+      .alphaDecay(0.02) // Slower decay for better placement
+      .velocityDecay(0.4) // Add some friction
+      .force('center', d3.forceCenter(containerDimensions.width / 2, containerDimensions.height / 2))
+      .force('charge', d3.forceManyBody().strength(-100))
+      .force('collide', d3.forceCollide<NodeDatum>().radius(d => d.r + 10).strength(0.9).iterations(4))
+      .force('x', d3.forceX(containerDimensions.width / 2).strength(0.05))
+      .force('y', d3.forceY(containerDimensions.height / 2).strength(0.05));
 
-    // Higher alpha and slower decay for better placement
-    simulation.alpha(0.9).alphaDecay(0.01);
-    
-    // Get the final positions once and stop
+    // Update nodes on each tick to see the simulation in progress
     simulation.on('tick', () => {
-      // Apply boundary constraints to keep nodes within the container
       simulation.nodes().forEach(node => {
+        // Ensure nodes stay within container bounds
         node.x = Math.max(node.r, Math.min(containerDimensions.width - node.r, node.x || 0));
         node.y = Math.max(node.r, Math.min(containerDimensions.height - node.r, node.y || 0));
       });
       
       setNodes([...simulation.nodes()]);
     });
-    
-    // Store simulation in ref to control it later
+
+    // Store simulation reference
     simulationRef.current = simulation;
     
-    // Run simulation intensely at first, then cool it down and stop completely
-    const runSimulation = async () => {
-      // First phase: High energy layout (3 seconds)
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
+    // Run simulation for fixed duration then stop it completely
+    const timer = setTimeout(() => {
       if (simulationRef.current) {
-        // Second phase: Finalize positions (1 second)
-        simulationRef.current.alpha(0.1).alphaTarget(0).restart();
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Stop simulation entirely
-        if (simulationRef.current) {
-          simulationRef.current.stop();
-          console.log("Simulation stopped permanently - positions fixed");
-          setLayoutComplete(true); // Mark layout as complete to never run again
-        }
+        simulationRef.current.stop();
+        console.log("Simulation completed and positions fixed");
+        setInitialLayoutComplete(true);
       }
-    };
+    }, 2000); // Let simulation run for 2 seconds then stop
     
-    runSimulation();
-    
-    // Clean up simulation on unmount
     return () => {
+      clearTimeout(timer);
       if (simulationRef.current) {
         simulationRef.current.stop();
       }
     };
-  }, [stocks, maxMarketCap, containerDimensions, layoutComplete]);
+  }, [stocks.length, maxMarketCap, containerDimensions, initialLayoutComplete]);
 
   return (
     <motion.div 
@@ -142,7 +122,6 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      style={{ width: containerDimensions.width, height: containerDimensions.height }}
     >
       {stocks.length === 0 ? (
         <div className="text-center py-8">

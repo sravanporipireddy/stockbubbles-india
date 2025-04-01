@@ -26,7 +26,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
 }) => {
   const [isHovering, setIsHovering] = useState(false);
   
-  // Calculate bubble size based on market cap using improved algorithm
+  // Calculate bubble size based on market cap
   const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap);
   const bubbleColor = getBubbleColor(stock.changePercent);
   
@@ -45,9 +45,9 @@ const StockBubble: React.FC<StockBubbleProps> = ({
       }}
       transition={{ 
         type: "spring",
-        stiffness: 30, // Lower stiffness for smoother motion
+        stiffness: 30,
         damping: 25,
-        delay: 0.01 * index, // Staggered appearance
+        delay: 0.01 * index,
       }}
       exit={{ scale: 0, opacity: 0 }}
       style={{ 
@@ -57,7 +57,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
         position: 'absolute',
         left: 0,
         top: 0,
-        transform: 'translate(-50%, -50%)' // Center the bubble
+        transform: 'translate(-50%, -50%)'
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
