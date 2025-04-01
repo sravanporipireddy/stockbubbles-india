@@ -27,6 +27,9 @@ import {
   fetchNseSectorPerformance
 } from '@/lib/stockUtils';
 
+// Import the polyfill for global
+import '@/lib/polyfills';
+
 const Index = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [filteredStocks, setFilteredStocks] = useState<Stock[]>([]);
@@ -84,6 +87,9 @@ const Index = () => {
       const initialStocks = generateInitialStocks();
       setStocks(initialStocks);
       setUsingRealData(false);
+      
+      // Use mock sector performance
+      setSectorPerformance(getSectorPerformance(initialStocks));
       
       toast.error("Using mock data", {
         description: "Couldn't connect to NSE API. Using simulated data instead.",
