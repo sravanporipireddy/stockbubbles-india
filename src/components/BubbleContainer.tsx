@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/stockUtils';
@@ -72,24 +71,30 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       };
     });
 
-    // Set up the simulation configuration (similar to @testboxlab/react-bubble-chart-d3)
+    // Use a much stronger collision force to ensure bubbles don't overlap
     const simulation = d3.forceSimulation<NodeDatum>()
       .nodes(newNodes)
-      .alpha(1) // Start with high energy
-      .alphaDecay(0.02) // Slower decay for better placement
+      .alpha(0.9) // Higher alpha for more energy
+      .alphaDecay(0.03) // Slower decay for better placement
       .velocityDecay(0.4) // Add some friction
       .force('center', d3.forceCenter(containerDimensions.width / 2, containerDimensions.height / 2))
-      .force('charge', d3.forceManyBody().strength(-100))
-      .force('collide', d3.forceCollide<NodeDatum>().radius(d => d.r + 10).strength(0.9).iterations(4))
-      .force('x', d3.forceX(containerDimensions.width / 2).strength(0.05))
-      .force('y', d3.forceY(containerDimensions.height / 2).strength(0.05));
+      .force('charge', d3.forceManyBody().strength(-20))
+      // Much stronger collision detection with higher padding
+      .force('collide', d3.forceCollide<NodeDatum>()
+        .radius(d => d.r + 15) // Add extra padding
+        .strength(1) // Maximum strength
+        .iterations(5)) // More iterations for better accuracy
+      .force('x', d3.forceX(containerDimensions.width / 2).strength(0.07))
+      .force('y', d3.forceY(containerDimensions.height / 2).strength(0.07));
 
     // Update nodes on each tick to see the simulation in progress
     simulation.on('tick', () => {
+      // Ensure nodes stay within container bounds with extra padding for collision
       simulation.nodes().forEach(node => {
-        // Ensure nodes stay within container bounds
-        node.x = Math.max(node.r, Math.min(containerDimensions.width - node.r, node.x || 0));
-        node.y = Math.max(node.r, Math.min(containerDimensions.height - node.r, node.y || 0));
+        // Padding to keep bubbles from touching the edge
+        const padding = 10;
+        node.x = Math.max(node.r + padding, Math.min(containerDimensions.width - node.r - padding, node.x || 0));
+        node.y = Math.max(node.r + padding, Math.min(containerDimensions.height - node.r - padding, node.y || 0));
       });
       
       setNodes([...simulation.nodes()]);
@@ -98,11 +103,11 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     // Store simulation reference
     simulationRef.current = simulation;
     
-    // Run simulation for fixed duration then stop it completely
+    // Let simulation run for fixed duration then stop it completely
     const timer = setTimeout(() => {
       if (simulationRef.current) {
         simulationRef.current.stop();
-        console.log("Simulation completed and positions fixed");
+        console.log("info: Simulation stopped permanently - positions fixed");
         setInitialLayoutComplete(true);
       }
     }, 2000); // Let simulation run for 2 seconds then stop

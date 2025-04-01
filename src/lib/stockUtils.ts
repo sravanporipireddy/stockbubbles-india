@@ -1,3 +1,4 @@
+
 import { Stock } from './mockData';
 
 // Function to format large numbers with commas and abbreviations
