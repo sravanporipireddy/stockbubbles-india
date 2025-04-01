@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/stockUtils';
@@ -24,6 +25,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const [nodes, setNodes] = useState<NodeDatum[]>([]);
   const simulationRef = useRef<d3.Simulation<NodeDatum, undefined> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [layoutComplete, setLayoutComplete] = useState(false);
   
   const [containerDimensions, setContainerDimensions] = useState({
     width: Math.min(window.innerWidth * 0.9, 1200),
@@ -33,20 +35,26 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      setContainerDimensions({
-        width: Math.min(window.innerWidth * 0.9, 1200),
-        height: 800
-      });
+      // Only update dimensions if layout is not complete to prevent re-positioning
+      if (!layoutComplete) {
+        setContainerDimensions({
+          width: Math.min(window.innerWidth * 0.9, 1200),
+          height: 800
+        });
+      }
     };
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, []);
+  }, [layoutComplete]);
 
-  // Initialize or update simulation when stocks change
+  // Initialize simulation when stocks change and layout is not complete
   useEffect(() => {
-    if (stocks.length === 0) {
-      setNodes([]);
+    // Skip simulation if layout is already complete or no stocks
+    if (layoutComplete || stocks.length === 0) {
+      if (stocks.length === 0) {
+        setNodes([]);
+      }
       return;
     }
 
@@ -68,28 +76,23 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     const centerX = containerDimensions.width / 2;
     const centerY = containerDimensions.height / 2;
 
-    // Create a new simulation with stronger prevention of overlaps
+    // Create a fixed positions simulation that won't run continuously
     const simulation = d3.forceSimulation<NodeDatum>()
       .nodes(newNodes)
-      // Center force pulls bubbles toward the center
       .force('center', d3.forceCenter<NodeDatum>(centerX, centerY))
-      // Much stronger collision force prevents bubbles from overlapping
       .force('collision', d3.forceCollide<NodeDatum>()
-        .radius(d => d.r + 15) // Increased padding between bubbles
-        .strength(1)           // Maximum strength (1.0)
-        .iterations(4))        // More iterations for better collision resolution
-      // Stronger charge force creates better repulsion between bubbles
+        .radius(d => d.r + 20) // Increased padding between bubbles
+        .strength(1)           // Maximum strength for collision prevention
+        .iterations(5))        // More iterations for better collision resolution
       .force('charge', d3.forceManyBody()
-        .strength(d => -Math.pow(d.r, 2) * 0.8)) // Increased repulsion
-      // X force keeps bubbles within container width with gentle constraint
+        .strength(d => -Math.pow(d.r, 2) * 1)) // Strong repulsion
       .force('x', d3.forceX<NodeDatum>(centerX).strength(0.1))
-      // Y force keeps bubbles within container height with gentle constraint
       .force('y', d3.forceY<NodeDatum>(centerY).strength(0.1));
 
-    // Use a higher alpha (initial energy) and slower decay for better placement
-    simulation.alpha(0.9).alphaDecay(0.02);
+    // Higher alpha and slower decay for better placement
+    simulation.alpha(0.9).alphaDecay(0.01);
     
-    // Update node positions on each tick
+    // Get the final positions once and stop
     simulation.on('tick', () => {
       // Apply boundary constraints to keep nodes within the container
       simulation.nodes().forEach(node => {
@@ -103,31 +106,34 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     // Store simulation in ref to control it later
     simulationRef.current = simulation;
     
-    // Run the simulation with high energy for better initial placement
-    // then stop it completely once bubbles are positioned
-    const simulationTimeout = setTimeout(() => {
+    // Run simulation intensely at first, then cool it down and stop completely
+    const runSimulation = async () => {
+      // First phase: High energy layout (3 seconds)
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
       if (simulationRef.current) {
-        // Intensify the simulation at the end to ensure good layout
-        simulationRef.current.alpha(0.1).alphaTarget(0).alphaDecay(0.05).restart();
+        // Second phase: Finalize positions (1 second)
+        simulationRef.current.alpha(0.1).alphaTarget(0).restart();
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
-        // Then stop it after a final positioning phase
-        setTimeout(() => {
-          if (simulationRef.current) {
-            simulationRef.current.stop();
-            console.log("Simulation stopped - positions fixed");
-          }
-        }, 1000);
+        // Stop simulation entirely
+        if (simulationRef.current) {
+          simulationRef.current.stop();
+          console.log("Simulation stopped permanently - positions fixed");
+          setLayoutComplete(true); // Mark layout as complete to never run again
+        }
       }
-    }, 3000); // Allow 3 seconds for initial positioning
+    };
     
-    // Clean up simulation on unmount or when stocks change
+    runSimulation();
+    
+    // Clean up simulation on unmount
     return () => {
-      clearTimeout(simulationTimeout);
       if (simulationRef.current) {
         simulationRef.current.stop();
       }
     };
-  }, [stocks, maxMarketCap, containerDimensions]);
+  }, [stocks, maxMarketCap, containerDimensions, layoutComplete]);
 
   return (
     <motion.div 
