@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Header from '@/components/Header';
 import SearchBar from '@/components/SearchBar';
@@ -50,7 +49,12 @@ const Index = () => {
     { name: 'NIFTY BANK', value: 48165.30, changePercent: 0.45 },
     { name: 'INDIA VIX', value: 13.86, changePercent: -2.34 },
   ]);
-  const [sectorPerformance, setSectorPerformance] = useState<{name: string, performance: number}[]>([]);
+  const [sectorPerformance, setSectorPerformance] = useState<{
+    name: string;
+    performance: number;
+    changePercent: number;
+    marketCap: number;
+  }[]>([]);
   
   const updateIntervalRef = useRef<number | null>(null);
   
@@ -89,7 +93,11 @@ const Index = () => {
       setUsingRealData(false);
       
       // Use mock sector performance
-      setSectorPerformance(getSectorPerformance(initialStocks));
+      setSectorPerformance(getSectorPerformance(initialStocks).map(item => ({
+        ...item,
+        changePercent: item.performance,
+        marketCap: 0
+      })));
       
       toast.error("Using mock data", {
         description: "Couldn't connect to NSE API. Using simulated data instead.",
@@ -230,7 +238,7 @@ const Index = () => {
           {showFooter && (
             <div className="fixed bottom-0 left-0 right-0 z-40">
               <Footer 
-                sectorPerformance={usingRealData ? sectorPerformance : getSectorPerformance(stocks)}
+                sectorPerformance={sectorPerformance}
                 indexData={indexData}
               />
             </div>

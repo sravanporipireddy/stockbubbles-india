@@ -10,6 +10,7 @@ interface FooterProps {
     name: string;
     changePercent: number;
     marketCap: number;
+    performance?: number;
   }[];
   indexData: {
     name: string;
@@ -89,7 +90,7 @@ const Footer: React.FC<FooterProps> = ({ sectorPerformance, indexData }) => {
         </div>
         
         <div className="flex justify-center mt-6 text-sm text-muted-foreground">
-          <p>Data is simulated for demonstration purposes</p>
+          <p>{!usingRealData ? "Data is simulated for demonstration purposes" : "Data from NSE India"}</p>
           <a 
             href="https://www.nseindia.com/" 
             target="_blank" 
