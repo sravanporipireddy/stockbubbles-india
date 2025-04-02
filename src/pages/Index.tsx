@@ -104,7 +104,7 @@ const Index = () => {
       const mockSectorPerf = getSectorPerformance(initialStocks);
       setSectorPerformance(mockSectorPerf.map(item => ({
         name: item.name,
-        changePercent: item.performance,
+        changePercent: item.changePercent,
         marketCap: 1000000000 * (Math.random() * 10 + 1)
       })));
       
@@ -170,7 +170,7 @@ const Index = () => {
       const mockSectorPerf = getSectorPerformance(initialStocks);
       setSectorPerformance(mockSectorPerf.map(item => ({
         name: item.name,
-        changePercent: item.performance,
+        changePercent: item.changePercent,
         marketCap: 1000000000 * (Math.random() * 10 + 1)
       })));
       

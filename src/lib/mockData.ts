@@ -152,18 +152,26 @@ export const updateStockPrices = (stocks: Stock[]): Stock[] => {
 };
 
 // Generate sector data
-export const getSectorPerformance = (stocks: Stock[]): { name: string, changePercent: number, marketCap: number }[] => {
-  const sectors = [...new Set(stocks.map(stock => stock.sector))];
+export const getSectorPerformance = (stocks: Stock[]) => {
+  const sectors: { [sector: string]: { totalMarketCap: number; totalChange: number; count: number } } = {};
   
-  return sectors.map(sector => {
-    const sectorStocks = stocks.filter(stock => stock.sector === sector);
-    const avgChangePercent = sectorStocks.reduce((sum, stock) => sum + stock.changePercent, 0) / sectorStocks.length;
-    const totalMarketCap = sectorStocks.reduce((sum, stock) => sum + stock.marketCap, 0);
-    
+  // Group stocks by sector and calculate total market cap and change
+  stocks.forEach(stock => {
+    if (!sectors[stock.sector]) {
+      sectors[stock.sector] = { totalMarketCap: 0, totalChange: 0, count: 0 };
+    }
+    sectors[stock.sector].totalMarketCap += stock.marketCap;
+    sectors[stock.sector].totalChange += stock.changePercent;
+    sectors[stock.sector].count += 1;
+  });
+  
+  // Calculate average performance for each sector
+  return Object.keys(sectors).map(sectorName => {
+    const sectorData = sectors[sectorName];
     return {
-      name: sector,
-      changePercent: parseFloat(avgChangePercent.toFixed(2)),
-      marketCap: totalMarketCap
+      name: sectorName,
+      changePercent: sectorData.totalChange / sectorData.count, // Using changePercent, not performance
+      marketCap: sectorData.totalMarketCap
     };
   });
 };
