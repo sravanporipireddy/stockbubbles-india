@@ -1,6 +1,8 @@
+
 import '../lib/polyfills';
 
 import { Stock } from './mockData';
+import finnhub from 'finnhub';
 
 // Function to format large numbers with commas and abbreviations
 export const formatNumber = (num: number): string => {
@@ -16,9 +18,9 @@ export const formatNumber = (num: number): string => {
   return num.toString();
 };
 
-// Function to format currency values (in ₹)
+// Function to format currency values (in $)
 export const formatCurrency = (value: number): string => {
-  return '₹' + formatNumber(value);
+  return '$' + formatNumber(value);
 };
 
 // Function to format percentage changes
@@ -120,93 +122,163 @@ export const getMaxMarketCap = (stocks: Stock[]): number => {
   return Math.max(...stocks.map(stock => stock.marketCap));
 };
 
-// Skip attempting to create the NseIndia instance which is causing issues
-// and just use mock data instead
-const nseApi = null;
-console.warn("Using mock NSE data instead of real API due to browser compatibility issues");
+// Initialize Finnhub client - use a demo API key by default
+// Users should replace this with their own API key
+const API_KEY = 'cphvjmir01qiijru5c6g'; // Demo key from Finnhub docs
+const finnhubClient = new finnhub.DefaultApi();
+finnhubClient.apiKey = API_KEY;
 
-// Improved mock function to fetch stocks (always using mock data for browser compatibility)
-export const fetchNseStocks = async (): Promise<Stock[]> => {
+// Function to fetch stocks from Finnhub API
+export const fetchStocks = async (): Promise<Stock[]> => {
   try {
-    // Since the NSE API has compatibility issues in the browser, 
-    // we'll implement a solution that returns mock stocks
-    const mockStocks: Stock[] = [
-      {
-        id: "RELIANCE",
-        symbol: "RELIANCE",
-        name: "Reliance Industries Ltd",
-        price: 2876.45,
-        previousPrice: 2850.30,
-        change: 26.15,
-        changePercent: 0.92,
-        marketCap: 1950000000000,
-        volume: 3500000,
-        sector: "Energy"
-      },
-      {
-        id: "TCS",
-        symbol: "TCS",
-        name: "Tata Consultancy Services Ltd",
-        price: 3567.80,
-        previousPrice: 3550.20,
-        change: 17.60,
-        changePercent: 0.50,
-        marketCap: 1300000000000,
-        volume: 1200000,
-        sector: "Technology"
-      },
-      {
-        id: "HDFCBANK",
-        symbol: "HDFCBANK",
-        name: "HDFC Bank Ltd",
-        price: 1678.25,
-        previousPrice: 1690.10,
-        change: -11.85,
-        changePercent: -0.70,
-        marketCap: 935000000000,
-        volume: 2800000,
-        sector: "Financial Services"
+    // Use S&P 500 stocks as a sample - you can change this to other symbols as needed
+    const symbols = ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'META', 'TSLA', 'NVDA', 'JPM', 'BAC', 'WMT'];
+    
+    const stocks: Stock[] = [];
+    
+    await Promise.all(symbols.map(async (symbol) => {
+      try {
+        // Get company profile
+        const profileData = await new Promise<any>((resolve, reject) => {
+          finnhubClient.companyProfile2({ 'symbol': symbol }, (error: any, data: any) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(data);
+            }
+          });
+        });
+        
+        // Get quote data
+        const quoteData = await new Promise<any>((resolve, reject) => {
+          finnhubClient.quote({ 'symbol': symbol }, (error: any, data: any) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(data);
+            }
+          });
+        });
+        
+        if (profileData && quoteData) {
+          const stock: Stock = {
+            id: symbol,
+            symbol: symbol,
+            name: profileData.name || symbol,
+            price: quoteData.c || 0,
+            previousPrice: quoteData.pc || 0,
+            change: quoteData.c - quoteData.pc,
+            changePercent: ((quoteData.c - quoteData.pc) / quoteData.pc) * 100,
+            marketCap: profileData.marketCapitalization || 1000000000,
+            volume: quoteData.v || 0,
+            sector: profileData.finnhubIndustry || 'Unknown'
+          };
+          
+          stocks.push(stock);
+        }
+      } catch (symbolError) {
+        console.error(`Error fetching data for ${symbol}:`, symbolError);
       }
+    }));
+    
+    return stocks;
+  } catch (error) {
+    console.error("Error fetching stocks from Finnhub:", error);
+    throw error;
+  }
+};
+
+// Function to fetch market indices data
+export const fetchIndices = async () => {
+  try {
+    const indices = [
+      { symbol: 'SPY', name: 'S&P 500' },
+      { symbol: 'DIA', name: 'Dow Jones' },
+      { symbol: 'QQQ', name: 'NASDAQ' },
+      { symbol: 'VIX', name: 'Volatility Index' },
     ];
     
-    return mockStocks;
+    const result = await Promise.all(indices.map(async (index) => {
+      try {
+        const quoteData = await new Promise<any>((resolve, reject) => {
+          finnhubClient.quote({ 'symbol': index.symbol }, (error: any, data: any) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(data);
+            }
+          });
+        });
+        
+        if (quoteData) {
+          return {
+            name: index.name,
+            value: quoteData.c || 0,
+            changePercent: ((quoteData.c - quoteData.pc) / quoteData.pc) * 100
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error(`Error fetching data for index ${index.symbol}:`, error);
+        return null;
+      }
+    }));
+    
+    return result.filter(Boolean);
   } catch (error) {
-    console.error("Error fetching NSE stocks:", error);
+    console.error("Error fetching indices:", error);
     throw error;
   }
 };
 
-// Mock function to fetch key indices data
-export const fetchNseIndices = async () => {
+// Function to fetch sector performance
+export const fetchSectorPerformance = async () => {
   try {
-    // Return mock indices data
-    return [
-      { name: "NIFTY 50", value: 22341.65, changePercent: 0.82 },
-      { name: "NIFTY BANK", value: 48165.30, changePercent: 0.45 },
-      { name: "NIFTY NEXT 50", value: 63554.20, changePercent: 0.93 },
-      { name: "INDIA VIX", value: 13.86, changePercent: -2.34 }
+    const sectorETFs = [
+      { symbol: 'XLK', name: 'Technology' },
+      { symbol: 'XLF', name: 'Financial' },
+      { symbol: 'XLV', name: 'Healthcare' },
+      { symbol: 'XLE', name: 'Energy' },
+      { symbol: 'XLI', name: 'Industrial' },
+      { symbol: 'XLP', name: 'Consumer Staples' },
+      { symbol: 'XLY', name: 'Consumer Discretionary' },
+      { symbol: 'XLB', name: 'Materials' },
+      { symbol: 'XLU', name: 'Utilities' },
+      { symbol: 'XLRE', name: 'Real Estate' },
     ];
+    
+    const result = await Promise.all(sectorETFs.map(async (sector) => {
+      try {
+        const quoteData = await new Promise<any>((resolve, reject) => {
+          finnhubClient.quote({ 'symbol': sector.symbol }, (error: any, data: any) => {
+            if (error) {
+              reject(error);
+            } else {
+              resolve(data);
+            }
+          });
+        });
+        
+        // Get a rough market cap estimate for the sector (this is simplified)
+        const marketCap = Math.random() * 10000000000 + 1000000000;
+        
+        if (quoteData) {
+          return {
+            name: sector.name,
+            changePercent: ((quoteData.c - quoteData.pc) / quoteData.pc) * 100,
+            marketCap: marketCap
+          };
+        }
+        return null;
+      } catch (error) {
+        console.error(`Error fetching data for sector ${sector.symbol}:`, error);
+        return null;
+      }
+    }));
+    
+    return result.filter(Boolean);
   } catch (error) {
-    console.error("Error fetching NSE indices:", error);
-    throw error;
-  }
-};
-
-// Mock function to fetch sector performance
-export const fetchNseSectorPerformance = async () => {
-  try {
-    // Return mock sector performance data
-    return [
-      { name: "IT", changePercent: 1.2, marketCap: 15000000000000 },
-      { name: "FMCG", changePercent: 0.8, marketCap: 9500000000000 },
-      { name: "AUTO", changePercent: -0.3, marketCap: 7800000000000 },
-      { name: "PHARMA", changePercent: 1.5, marketCap: 6200000000000 },
-      { name: "METAL", changePercent: -1.2, marketCap: 5100000000000 },
-      { name: "BANK", changePercent: 0.4, marketCap: 18500000000000 },
-      { name: "ENERGY", changePercent: 2.1, marketCap: 12700000000000 }
-    ];
-  } catch (error) {
-    console.error("Error fetching NSE sector performance:", error);
+    console.error("Error fetching sector performance:", error);
     throw error;
   }
 };

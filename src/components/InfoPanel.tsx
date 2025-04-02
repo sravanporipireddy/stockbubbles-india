@@ -6,7 +6,7 @@ import {
   TrendingDown, 
   BarChart4, 
   Activity, 
-  IndianRupee,
+  DollarSign,
   Info,
   Building2 
 } from 'lucide-react';
@@ -64,7 +64,7 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ stock, onClose }) => {
               <p className="text-muted-foreground">{stock.name}</p>
               <div className="flex items-baseline mt-1">
                 <span className="text-xl font-semibold flex items-center">
-                  <IndianRupee size={18} />
+                  <DollarSign size={18} />
                   {stock.price.toFixed(2)}
                 </span>
                 <span className={`ml-2 ${changeTextColor}`}>
