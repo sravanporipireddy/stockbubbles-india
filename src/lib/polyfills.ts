@@ -1,26 +1,26 @@
 
-// This polyfill adds Node.js environment variables and globals to the window object
-// for libraries that expect Node.js environments
+// This file contains polyfills needed by the application
 
-// Add global to window
+// Set up global variables that might be missing in some environments
 if (typeof window !== 'undefined') {
-  // Fix for "global is not defined"
-  window.global = window;
+  // Polyfill for ResizeObserver if not available
+  if (!window.ResizeObserver) {
+    console.warn('ResizeObserver is not supported in this browser. Some UI features may not work correctly.');
+  }
   
-  // Fix for "process is not defined"
-  window.process = window.process || {
-    env: { NODE_ENV: 'production' }
-  } as any;
+  // Polyfill for IntersectionObserver if not available
+  if (!window.IntersectionObserver) {
+    console.warn('IntersectionObserver is not supported in this browser. Some UI features may not work correctly.');
+  }
   
-  // Fix for "Buffer is not defined"
-  window.Buffer = window.Buffer || {} as any;
+  // Check if required global objects exist
+  if (!window.process) {
+    window.process = { env: {} } as any;
+  }
   
-  // Fix for moment-range requiring a global moment
-  window.moment = window.moment || {} as any;
+  // Remove the problematic moment polyfill - we don't need it for Finnhub
+  // Finnhub doesn't depend on moment.js
 }
 
-// Export a dummy function to ensure this file is imported
-export default function ensurePolyfills() {
-  // This is intentionally empty, just to ensure the side effects run
-  return true;
-}
+// Make sure this module is always imported first to ensure polyfills are applied
+export {};

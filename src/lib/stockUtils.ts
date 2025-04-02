@@ -1,5 +1,5 @@
 
-import '../lib/polyfills';
+import './polyfills';
 
 import { Stock } from './mockData';
 import finnhub from 'finnhub';
@@ -122,7 +122,7 @@ export const getMaxMarketCap = (stocks: Stock[]): number => {
   return Math.max(...stocks.map(stock => stock.marketCap));
 };
 
-// Initialize Finnhub client - use a demo API key by default
+// Initialize Finnhub client with demo API key
 // Users should replace this with their own API key
 const API_KEY = 'cphvjmir01qiijru5c6g'; // Demo key from Finnhub docs
 const finnhubClient = new finnhub.DefaultApi();
@@ -131,7 +131,7 @@ finnhubClient.apiKey = API_KEY;
 // Function to fetch stocks from Finnhub API
 export const fetchStocks = async (): Promise<Stock[]> => {
   try {
-    // Use S&P 500 stocks as a sample - you can change this to other symbols as needed
+    // Use a selection of popular stocks as a sample
     const symbols = ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'META', 'TSLA', 'NVDA', 'JPM', 'BAC', 'WMT'];
     
     const stocks: Stock[] = [];
@@ -139,8 +139,8 @@ export const fetchStocks = async (): Promise<Stock[]> => {
     await Promise.all(symbols.map(async (symbol) => {
       try {
         // Get company profile
-        const profileData = await new Promise<any>((resolve, reject) => {
-          finnhubClient.companyProfile2({ 'symbol': symbol }, (error: any, data: any) => {
+        const profileData: any = await new Promise((resolve, reject) => {
+          finnhubClient.companyProfile2({ symbol }, (error: any, data: any) => {
             if (error) {
               reject(error);
             } else {
@@ -150,8 +150,8 @@ export const fetchStocks = async (): Promise<Stock[]> => {
         });
         
         // Get quote data
-        const quoteData = await new Promise<any>((resolve, reject) => {
-          finnhubClient.quote({ 'symbol': symbol }, (error: any, data: any) => {
+        const quoteData: any = await new Promise((resolve, reject) => {
+          finnhubClient.quote({ symbol }, (error: any, data: any) => {
             if (error) {
               reject(error);
             } else {
@@ -169,7 +169,7 @@ export const fetchStocks = async (): Promise<Stock[]> => {
             previousPrice: quoteData.pc || 0,
             change: quoteData.c - quoteData.pc,
             changePercent: ((quoteData.c - quoteData.pc) / quoteData.pc) * 100,
-            marketCap: profileData.marketCapitalization || 1000000000,
+            marketCap: profileData.marketCapitalization * 1000000 || 1000000000,
             volume: quoteData.v || 0,
             sector: profileData.finnhubIndustry || 'Unknown'
           };
@@ -200,8 +200,8 @@ export const fetchIndices = async () => {
     
     const result = await Promise.all(indices.map(async (index) => {
       try {
-        const quoteData = await new Promise<any>((resolve, reject) => {
-          finnhubClient.quote({ 'symbol': index.symbol }, (error: any, data: any) => {
+        const quoteData: any = await new Promise((resolve, reject) => {
+          finnhubClient.quote({ symbol: index.symbol }, (error: any, data: any) => {
             if (error) {
               reject(error);
             } else {
@@ -249,8 +249,8 @@ export const fetchSectorPerformance = async () => {
     
     const result = await Promise.all(sectorETFs.map(async (sector) => {
       try {
-        const quoteData = await new Promise<any>((resolve, reject) => {
-          finnhubClient.quote({ 'symbol': sector.symbol }, (error: any, data: any) => {
+        const quoteData: any = await new Promise((resolve, reject) => {
+          finnhubClient.quote({ symbol: sector.symbol }, (error: any, data: any) => {
             if (error) {
               reject(error);
             } else {
