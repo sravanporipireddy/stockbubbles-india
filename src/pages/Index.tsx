@@ -6,8 +6,8 @@ import InfoPanel from '@/components/InfoPanel';
 import Footer from '@/components/Footer';
 import BubbleContainer from '@/components/BubbleContainer';
 import StockTable from '@/components/StockTable';
+import BreezeLoginForm from '@/components/BreezeLoginForm';
 import { AnimatePresence, motion } from 'framer-motion';
-import { useToast } from "@/hooks/use-toast";
 import { toast } from "sonner";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { 
@@ -26,6 +26,7 @@ import {
   fetchNseIndices,
   fetchNseSectorPerformance
 } from '@/lib/stockUtils';
+import { breezeApi } from '@/lib/breezeApi';
 import { AlertCircle, RefreshCcw } from 'lucide-react';
 
 // Import the polyfill for global
@@ -41,8 +42,10 @@ const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showFooter, setShowFooter] = useState(false);
   const [usingRealData, setUsingRealData] = useState(false);
+  const [dataSource, setDataSource] = useState<'NSE India' | 'ICICI Direct' | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [showLoginForm, setShowLoginForm] = useState(false);
   
   const [sortBy, setSortBy] = useState<SortCriteria>('marketCap');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -55,26 +58,84 @@ const Index = () => {
   ]);
   const [sectorPerformance, setSectorPerformance] = useState<{
     name: string;
-    performance: number;
     changePercent: number;
     marketCap: number;
+    performance?: number;
   }[]>([]);
   
   const updateIntervalRef = useRef<number | null>(null);
   
-  const loadRealTimeData = async () => {
+  useEffect(() => {
+    const session = breezeApi.getSession();
+    if (session.isAuthenticated) {
+      setShowLoginForm(false);
+      loadBreezeData();
+    }
+  }, []);
+  
+  const loadBreezeData = async () => {
     setLoading(true);
     setApiError(null);
     setIsRefreshing(true);
     
     try {
-      // Fetch real-time stock data
+      const marketData = await breezeApi.getMarketData();
+      
+      setIndexData(marketData.indices);
+      
+      setSectorPerformance(marketData.sectors);
+      
+      const initialStocks = generateInitialStocks();
+      setStocks(initialStocks);
+      
+      setUsingRealData(true);
+      setDataSource('ICICI Direct');
+      
+      toast.success("Using ICICI Direct Breeze API data", {
+        description: "Connected successfully to Breeze API",
+      });
+    } catch (error) {
+      console.error("Failed to load Breeze data:", error);
+      setApiError(error instanceof Error ? error.message : "Failed to connect to Breeze API");
+      
+      const initialStocks = generateInitialStocks();
+      setStocks(initialStocks);
+      setUsingRealData(false);
+      setDataSource(null);
+      
+      const mockSectorPerf = getSectorPerformance(initialStocks);
+      setSectorPerformance(mockSectorPerf.map(item => ({
+        ...item,
+        changePercent: item.performance || 0,
+        marketCap: 1000000000 * (Math.random() * 10 + 1)
+      })));
+      
+      toast.error("Using mock data", {
+        description: "Couldn't connect to Breeze API. Using simulated data instead.",
+      });
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+  
+  const loadRealTimeData = async () => {
+    const session = breezeApi.getSession();
+    if (session.isAuthenticated) {
+      return loadBreezeData();
+    }
+    
+    setLoading(true);
+    setApiError(null);
+    setIsRefreshing(true);
+    
+    try {
       const realTimeStocks = await fetchNseStocks();
       if (realTimeStocks.length > 0) {
         setStocks(realTimeStocks);
         setUsingRealData(true);
+        setDataSource('NSE India');
         
-        // Fetch real-time index data
         try {
           const indices = await fetchNseIndices();
           if (indices && indices.length > 0) {
@@ -82,10 +143,8 @@ const Index = () => {
           }
         } catch (indexError) {
           console.error("Failed to load index data:", indexError);
-          // Continue with other data loading even if indices fail
         }
         
-        // Fetch sector performance
         try {
           const sectorData = await fetchNseSectorPerformance();
           if (sectorData && sectorData.length > 0) {
@@ -93,7 +152,6 @@ const Index = () => {
           }
         } catch (sectorError) {
           console.error("Failed to load sector data:", sectorError);
-          // Continue even if sector data fails
         }
         
         toast.success("Using real-time NSE data", {
@@ -104,24 +162,22 @@ const Index = () => {
       }
     } catch (error) {
       console.error("Failed to load real-time data:", error);
-      // Set error message
       setApiError(error instanceof Error ? error.message : "Failed to connect to NSE API");
       
-      // Fall back to mock data
       const initialStocks = generateInitialStocks();
       setStocks(initialStocks);
       setUsingRealData(false);
+      setDataSource(null);
       
-      // Use mock sector performance
       const mockSectorPerf = getSectorPerformance(initialStocks);
       setSectorPerformance(mockSectorPerf.map(item => ({
         ...item,
-        changePercent: item.performance,
-        marketCap: 1000000000 * (Math.random() * 10 + 1) // Random market cap for visualization
+        changePercent: item.performance || 0,
+        marketCap: 1000000000 * (Math.random() * 10 + 1)
       })));
       
       toast.error("Using mock data", {
-        description: "Couldn't connect to NSE API. Using simulated data instead.",
+        description: "Couldn't connect to API. Using simulated data instead.",
       });
     } finally {
       setLoading(false);
@@ -131,25 +187,42 @@ const Index = () => {
   
   const handleRefresh = () => {
     if (!isRefreshing) {
-      loadRealTimeData();
+      const session = breezeApi.getSession();
+      if (session.isAuthenticated) {
+        loadBreezeData();
+      } else {
+        loadRealTimeData();
+      }
     }
   };
   
+  const handleBreezeLogin = () => {
+    loadBreezeData();
+  };
+  
+  const handleBreezeLogout = () => {
+    loadRealTimeData();
+  };
+  
+  const toggleBreezeLogin = () => {
+    setShowLoginForm(!showLoginForm);
+  };
+  
   useEffect(() => {
-    // Initial data load
     loadRealTimeData();
     
-    // Set up periodic data refresh
     updateIntervalRef.current = window.setInterval(() => {
-      if (usingRealData) {
-        // Reload real data every 2 minutes
+      const session = breezeApi.getSession();
+      if (session.isAuthenticated && usingRealData) {
+        loadBreezeData();
+        console.log("Refreshed data from Breeze API");
+      } else if (usingRealData) {
         loadRealTimeData();
         console.log("Refreshed real-time data from NSE");
       } else {
-        // Update mock data more frequently
         setStocks(prev => updateStockPrices(prev));
       }
-    }, usingRealData ? 120000 : 8000); // 2 minutes for real data, 8 seconds for mock
+    }, usingRealData ? 120000 : 8000);
     
     return () => {
       if (updateIntervalRef.current) {
@@ -221,12 +294,27 @@ const Index = () => {
           <div className="flex flex-col items-center animate-fade-in">
             <h1 className="text-2xl md:text-3xl font-bold text-center mb-3">
               Indian Stock Market Visualization
-              {usingRealData && <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Live Data</span>}
+              {usingRealData && (
+                <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                  {dataSource} Live Data
+                </span>
+              )}
             </h1>
             <p className="text-muted-foreground text-center max-w-2xl mb-4">
               Explore the Indian stock market with interactive bubbles. Size represents market cap, 
               while color indicates performance.
             </p>
+            
+            {showLoginForm && (
+              <div className="w-full max-w-md mb-6">
+                <BreezeLoginForm 
+                  onLogin={handleBreezeLogin}
+                  onLogout={handleBreezeLogout}
+                  onRefresh={handleRefresh}
+                  isRefreshing={isRefreshing}
+                />
+              </div>
+            )}
             
             {apiError && (
               <Alert variant="destructive" className="mb-4 max-w-xl">
@@ -234,17 +322,41 @@ const Index = () => {
                 <AlertTitle>API Connection Error</AlertTitle>
                 <AlertDescription className="flex flex-col gap-2">
                   <div>{apiError}</div>
-                  <div className="text-xs">Using simulated data instead. You can try refreshing the data.</div>
-                  <button 
-                    onClick={handleRefresh}
-                    className="flex items-center gap-1 text-xs bg-white hover:bg-gray-100 text-gray-800 py-1 px-3 rounded w-fit"
-                    disabled={isRefreshing}
-                  >
-                    <RefreshCcw size={12} className={isRefreshing ? "animate-spin" : ""} />
-                    {isRefreshing ? "Refreshing..." : "Refresh Data"}
-                  </button>
+                  <div className="text-xs">
+                    {breezeApi.getSession().isAuthenticated
+                      ? "There was an error with the Breeze API. Try refreshing the data."
+                      : "Using simulated data instead. You can try connecting to ICICI Direct Breeze API or refreshing the NSE data."}
+                  </div>
+                  <div className="flex gap-2 mt-1">
+                    <button 
+                      onClick={handleRefresh}
+                      className="flex items-center gap-1 text-xs bg-white hover:bg-gray-100 text-gray-800 py-1 px-3 rounded w-fit"
+                      disabled={isRefreshing}
+                    >
+                      <RefreshCcw size={12} className={isRefreshing ? "animate-spin" : ""} />
+                      {isRefreshing ? "Refreshing..." : "Refresh Data"}
+                    </button>
+                    
+                    {!breezeApi.getSession().isAuthenticated && (
+                      <button 
+                        onClick={toggleBreezeLogin}
+                        className="flex items-center gap-1 text-xs bg-white hover:bg-gray-100 text-gray-800 py-1 px-3 rounded w-fit"
+                      >
+                        {showLoginForm ? "Hide Breeze Login" : "Connect to ICICI Direct"}
+                      </button>
+                    )}
+                  </div>
                 </AlertDescription>
               </Alert>
+            )}
+            
+            {!apiError && !breezeApi.getSession().isAuthenticated && !showLoginForm && (
+              <button 
+                onClick={toggleBreezeLogin}
+                className="mb-4 text-sm flex items-center gap-1 bg-primary hover:bg-primary/90 text-white py-1 px-4 rounded-full"
+              >
+                Connect to ICICI Direct Breeze API
+              </button>
             )}
             
             <div className="w-full max-w-md mb-4">
@@ -288,6 +400,7 @@ const Index = () => {
                 sectorPerformance={sectorPerformance}
                 indexData={indexData}
                 usingRealData={usingRealData}
+                dataSource={dataSource || undefined}
               />
             </div>
           )}

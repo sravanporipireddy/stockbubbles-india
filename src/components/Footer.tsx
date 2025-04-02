@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,9 +18,15 @@ interface FooterProps {
     changePercent: number;
   }[];
   usingRealData: boolean;
+  dataSource?: string;
 }
 
-const Footer: React.FC<FooterProps> = ({ sectorPerformance, indexData, usingRealData }) => {
+const Footer: React.FC<FooterProps> = ({ 
+  sectorPerformance, 
+  indexData, 
+  usingRealData,
+  dataSource = "NSE India" 
+}) => {
   return (
     <motion.footer 
       className="w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-800 py-4 px-4 md:px-6"
@@ -90,15 +97,27 @@ const Footer: React.FC<FooterProps> = ({ sectorPerformance, indexData, usingReal
         </div>
         
         <div className="flex justify-center mt-6 text-sm text-muted-foreground">
-          <p>{!usingRealData ? "Data is simulated for demonstration purposes" : "Data from NSE India"}</p>
-          <a 
-            href="https://www.nseindia.com/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="inline-flex items-center ml-4 text-primary hover:underline"
-          >
-            NSE India <ExternalLink size={12} className="ml-1" />
-          </a>
+          <p>{!usingRealData ? "Data is simulated for demonstration purposes" : `Data from ${dataSource}`}</p>
+          {usingRealData && dataSource === "ICICI Direct" && (
+            <a 
+              href="https://www.icicidirect.com/futures-and-options/api/breeze" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center ml-4 text-primary hover:underline"
+            >
+              ICICI Direct Breeze API <ExternalLink size={12} className="ml-1" />
+            </a>
+          )}
+          {usingRealData && dataSource === "NSE India" && (
+            <a 
+              href="https://www.nseindia.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="inline-flex items-center ml-4 text-primary hover:underline"
+            >
+              NSE India <ExternalLink size={12} className="ml-1" />
+            </a>
+          )}
         </div>
       </div>
     </motion.footer>
