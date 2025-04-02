@@ -10,7 +10,6 @@ interface FooterProps {
     name: string;
     changePercent: number;
     marketCap: number;
-    performance?: number;
   }[];
   indexData: {
     name: string;

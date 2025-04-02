@@ -60,7 +60,6 @@ const Index = () => {
     name: string;
     changePercent: number;
     marketCap: number;
-    performance?: number;
   }[]>([]);
   
   const updateIntervalRef = useRef<number | null>(null);
@@ -82,7 +81,6 @@ const Index = () => {
       const marketData = await breezeApi.getMarketData();
       
       setIndexData(marketData.indices);
-      
       setSectorPerformance(marketData.sectors);
       
       const initialStocks = generateInitialStocks();
@@ -105,8 +103,8 @@ const Index = () => {
       
       const mockSectorPerf = getSectorPerformance(initialStocks);
       setSectorPerformance(mockSectorPerf.map(item => ({
-        ...item,
-        changePercent: item.performance || 0,
+        name: item.name,
+        changePercent: item.performance,
         marketCap: 1000000000 * (Math.random() * 10 + 1)
       })));
       
@@ -171,8 +169,8 @@ const Index = () => {
       
       const mockSectorPerf = getSectorPerformance(initialStocks);
       setSectorPerformance(mockSectorPerf.map(item => ({
-        ...item,
-        changePercent: item.performance || 0,
+        name: item.name,
+        changePercent: item.performance,
         marketCap: 1000000000 * (Math.random() * 10 + 1)
       })));
       
