@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import '@/lib/polyfills';
+
 import Header from '@/components/Header';
 import SearchBar from '@/components/SearchBar';
 import FilterBar from '@/components/FilterBar';
@@ -28,9 +30,6 @@ import {
 } from '@/lib/stockUtils';
 import { breezeApi } from '@/lib/breezeApi';
 import { AlertCircle, RefreshCcw } from 'lucide-react';
-
-// Import the polyfill for global
-import '@/lib/polyfills';
 
 const Index = () => {
   const [stocks, setStocks] = useState<Stock[]>([]);
