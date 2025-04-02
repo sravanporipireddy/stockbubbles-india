@@ -1,7 +1,6 @@
 import '../lib/polyfills';
 
 import { Stock } from './mockData';
-import { NseIndia } from 'stock-nse-india';
 
 // Function to format large numbers with commas and abbreviations
 export const formatNumber = (num: number): string => {
@@ -121,23 +120,16 @@ export const getMaxMarketCap = (stocks: Stock[]): number => {
   return Math.max(...stocks.map(stock => stock.marketCap));
 };
 
-// Create an instance of the NSE India API client with error handling
-let nseApi: NseIndia | null = null;
-try {
-  nseApi = new NseIndia();
-} catch (error) {
-  console.error("Failed to initialize NSE India API:", error);
-}
+// Skip attempting to create the NseIndia instance which is causing issues
+// and just use mock data instead
+const nseApi = null;
+console.warn("Using mock NSE data instead of real API due to browser compatibility issues");
 
-// Improved mock function to fetch stocks (fallback since NSE API methods don't exist)
+// Improved mock function to fetch stocks (always using mock data for browser compatibility)
 export const fetchNseStocks = async (): Promise<Stock[]> => {
   try {
-    if (!nseApi) {
-      throw new Error("NSE API could not be initialized");
-    }
-    
-    // Since the NSE API doesn't have the expected methods, we'll implement a minimal solution
-    // that returns some basic stocks for demonstration purposes
+    // Since the NSE API has compatibility issues in the browser, 
+    // we'll implement a solution that returns mock stocks
     const mockStocks: Stock[] = [
       {
         id: "RELIANCE",

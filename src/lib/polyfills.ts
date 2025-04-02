@@ -9,17 +9,14 @@ if (typeof window !== 'undefined') {
   
   // Fix for "process is not defined"
   window.process = window.process || {
-    env: { NODE_ENV: 'production' },
-    browser: true,
-    version: '',
-    versions: {},
-    nextTick: function(cb) { setTimeout(cb, 0); }
-  };
+    env: { NODE_ENV: 'production' }
+  } as any;
   
   // Fix for "Buffer is not defined"
-  window.Buffer = window.Buffer || {
-    isBuffer: function() { return false; }
-  };
+  window.Buffer = window.Buffer || {} as any;
+  
+  // Fix for moment-range requiring a global moment
+  window.moment = window.moment || {} as any;
 }
 
 // Export a dummy function to ensure this file is imported

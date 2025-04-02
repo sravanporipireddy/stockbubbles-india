@@ -1,5 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+// Import polyfills first
 import '@/lib/polyfills';
+
+import React, { useState, useEffect, useRef } from 'react';
 
 import Header from '@/components/Header';
 import SearchBar from '@/components/SearchBar';
