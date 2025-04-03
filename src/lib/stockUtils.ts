@@ -2,7 +2,8 @@
 import './polyfills';
 
 import { Stock } from './mockData';
-import finnhub from 'finnhub';
+// Import Finnhub correctly - using require syntax for compatibility
+const finnhub = require('finnhub');
 
 // Function to format large numbers with commas and abbreviations
 export const formatNumber = (num: number): string => {
@@ -125,8 +126,41 @@ export const getMaxMarketCap = (stocks: Stock[]): number => {
 // Initialize Finnhub client with demo API key
 // Users should replace this with their own API key
 const API_KEY = 'cphvjmir01qiijru5c6g'; // Demo key from Finnhub docs
-const finnhubClient = new finnhub.DefaultApi();
-finnhubClient.apiKey = API_KEY;
+
+// Initialize finnhub client properly with error handling
+let finnhubClient: any;
+try {
+  const api = new finnhub.DefaultApi();
+  api.apiKey = API_KEY;
+  finnhubClient = api;
+  console.log('Finnhub client initialized successfully');
+} catch (error) {
+  console.error('Failed to initialize Finnhub client:', error);
+  finnhubClient = null;
+}
+
+// Helper function to safely make Finnhub API calls
+const makeFinnhubRequest = (method: string, params: any): Promise<any> => {
+  return new Promise((resolve, reject) => {
+    if (!finnhubClient) {
+      reject(new Error('Finnhub client is not initialized'));
+      return;
+    }
+    
+    try {
+      // @ts-ignore - We know this method exists on the client
+      finnhubClient[method](params, (error: any, data: any) => {
+        if (error) {
+          reject(error);
+        } else {
+          resolve(data);
+        }
+      });
+    } catch (error) {
+      reject(error);
+    }
+  });
+};
 
 // Function to fetch stocks from Finnhub API
 export const fetchStocks = async (): Promise<Stock[]> => {
@@ -139,26 +173,10 @@ export const fetchStocks = async (): Promise<Stock[]> => {
     await Promise.all(symbols.map(async (symbol) => {
       try {
         // Get company profile
-        const profileData: any = await new Promise((resolve, reject) => {
-          finnhubClient.companyProfile2({ symbol }, (error: any, data: any) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(data);
-            }
-          });
-        });
+        const profileData: any = await makeFinnhubRequest('companyProfile2', { symbol });
         
         // Get quote data
-        const quoteData: any = await new Promise((resolve, reject) => {
-          finnhubClient.quote({ symbol }, (error: any, data: any) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(data);
-            }
-          });
-        });
+        const quoteData: any = await makeFinnhubRequest('quote', { symbol });
         
         if (profileData && quoteData) {
           const stock: Stock = {
@@ -200,15 +218,7 @@ export const fetchIndices = async () => {
     
     const result = await Promise.all(indices.map(async (index) => {
       try {
-        const quoteData: any = await new Promise((resolve, reject) => {
-          finnhubClient.quote({ symbol: index.symbol }, (error: any, data: any) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(data);
-            }
-          });
-        });
+        const quoteData: any = await makeFinnhubRequest('quote', { symbol: index.symbol });
         
         if (quoteData) {
           return {
@@ -249,15 +259,7 @@ export const fetchSectorPerformance = async () => {
     
     const result = await Promise.all(sectorETFs.map(async (sector) => {
       try {
-        const quoteData: any = await new Promise((resolve, reject) => {
-          finnhubClient.quote({ symbol: sector.symbol }, (error: any, data: any) => {
-            if (error) {
-              reject(error);
-            } else {
-              resolve(data);
-            }
-          });
-        });
+        const quoteData: any = await makeFinnhubRequest('quote', { symbol: sector.symbol });
         
         // Get a rough market cap estimate for the sector (this is simplified)
         const marketCap = Math.random() * 10000000000 + 1000000000;
