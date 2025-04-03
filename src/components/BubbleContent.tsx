@@ -2,7 +2,7 @@
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Stock } from '@/lib/mockData';
-import { formatPrice, formatPercentage } from '@/lib/stockUtils';
+import { formatPrice, formatPercentage } from '@/lib/formatUtils';
 import { motion } from 'framer-motion';
 
 interface BubbleContentProps {

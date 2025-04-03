@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
-import { getMaxMarketCap, getBubbleSize } from '@/lib/stockUtils';
+import { getMaxMarketCap, getBubbleSize } from '@/lib/visualUtils';
 import StockBubble from './StockBubble';
 import { motion } from 'framer-motion';
 import * as d3 from 'd3';

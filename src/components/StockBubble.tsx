@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Stock } from '@/lib/mockData';
@@ -6,7 +5,7 @@ import BubbleContent from './BubbleContent';
 import { 
   getBubbleColor, 
   getBubbleSize
-} from '@/lib/stockUtils';
+} from '@/lib/visualUtils';
 
 interface StockBubbleProps {
   stock: Stock;

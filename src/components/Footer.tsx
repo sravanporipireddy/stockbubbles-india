@@ -1,9 +1,8 @@
-
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
-import { formatPercentage, formatNumber } from '@/lib/stockUtils';
+import { formatPercentage, formatNumber } from '@/lib/formatUtils';
 
 interface FooterProps {
   sectorPerformance: {

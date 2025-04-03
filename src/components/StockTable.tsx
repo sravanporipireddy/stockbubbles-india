@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { Stock } from '@/lib/mockData';
-import { SortCriteria, SortDirection, formatPercentage, formatPrice, formatCurrency, getTextColor } from '@/lib/stockUtils';
+import { SortCriteria, SortDirection } from '@/lib/filterUtils';
+import { formatPercentage, formatPrice, formatCurrency, getTextColor } from '@/lib/stockUtils';
 import { TrendingUp, TrendingDown, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
