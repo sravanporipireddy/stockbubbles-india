@@ -1,3 +1,4 @@
+
 import './polyfills';
 
 import { Stock } from './mockData';
@@ -126,7 +127,9 @@ const API_KEY = 'sk-live-FzUh40xZf0dIYHahCCt8hc0Kiy84tOZ620CN2Mmm';
 // Helper function to make the API requests to indianapi.in
 const makeApiRequest = async (endpoint: string): Promise<any> => {
   try {
-    const response = await fetch(`https://indianapi.in/sandbox/stock${endpoint}`, {
+    console.log(`Making API request to: https://indianapi.in/api/v1${endpoint}`);
+    
+    const response = await fetch(`https://indianapi.in/api/v1${endpoint}`, {
       headers: {
         'Authorization': `Bearer ${API_KEY}`,
         'Content-Type': 'application/json'
@@ -147,8 +150,10 @@ const makeApiRequest = async (endpoint: string): Promise<any> => {
 // Function to fetch stocks from the Indian Stock Market API
 export const fetchStocks = async (): Promise<Stock[]> => {
   try {
-    // Fetch top stocks from the NSE endpoint (using sandbox endpoint)
-    const stocksResponse = await makeApiRequest('/nifty50');
+    // Fetch top stocks from the stock endpoint using the correct path
+    const stocksResponse = await makeApiRequest('/stock/nifty50');
+    
+    console.log("API Response:", stocksResponse);
     
     if (!stocksResponse.data || !Array.isArray(stocksResponse.data)) {
       throw new Error("Invalid response format from API");
@@ -187,7 +192,9 @@ export const fetchStocks = async (): Promise<Stock[]> => {
 // Function to fetch market indices data
 export const fetchIndices = async () => {
   try {
-    const indicesResponse = await makeApiRequest('/indices');
+    const indicesResponse = await makeApiRequest('/stock/indices');
+    
+    console.log("Indices Response:", indicesResponse);
     
     if (!indicesResponse.data || !Array.isArray(indicesResponse.data)) {
       throw new Error("Invalid indices response format from API");
@@ -238,7 +245,9 @@ export const fetchIndices = async () => {
 // Function to fetch sector performance
 export const fetchSectorPerformance = async () => {
   try {
-    const sectorsResponse = await makeApiRequest('/sectors');
+    const sectorsResponse = await makeApiRequest('/stock/sectors');
+    
+    console.log("Sectors Response:", sectorsResponse);
     
     if (!sectorsResponse.data || !Array.isArray(sectorsResponse.data)) {
       throw new Error("Invalid sectors response format from API");
