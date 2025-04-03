@@ -1,4 +1,3 @@
-
 // Import polyfills first
 import '@/lib/polyfills';
 
@@ -42,7 +41,7 @@ const Index = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showFooter, setShowFooter] = useState(false);
   const [usingRealData, setUsingRealData] = useState(false);
-  const [dataSource, setDataSource] = useState<'Finnhub' | null>(null);
+  const [dataSource, setDataSource] = useState<'IndianAPI.in' | null>(null);
   const [apiError, setApiError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
@@ -50,10 +49,10 @@ const Index = () => {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const [indexData, setIndexData] = useState([
-    { name: 'S&P 500', value: 4587.65, changePercent: 0.82 },
-    { name: 'Dow Jones', value: 38060.42, changePercent: 0.76 },
-    { name: 'NASDAQ', value: 16156.33, changePercent: 0.95 },
-    { name: 'VIX', value: 13.86, changePercent: -2.34 },
+    { name: 'NIFTY 50', value: 22462.25, changePercent: 0.82 },
+    { name: 'NIFTY BANK', value: 48235.10, changePercent: 0.76 },
+    { name: 'NIFTY IT', value: 34590.75, changePercent: 0.95 },
+    { name: 'INDIA VIX', value: 12.86, changePercent: -2.34 },
   ]);
   const [sectorPerformance, setSectorPerformance] = useState<{
     name: string;
@@ -73,7 +72,7 @@ const Index = () => {
       if (realTimeStocks.length > 0) {
         setStocks(realTimeStocks);
         setUsingRealData(true);
-        setDataSource('Finnhub');
+        setDataSource('IndianAPI.in');
         
         try {
           const indices = await fetchIndices();
@@ -93,15 +92,15 @@ const Index = () => {
           console.error("Failed to load sector data:", sectorError);
         }
         
-        toast.success("Using real-time Finnhub data", {
-          description: `Loaded ${realTimeStocks.length} stocks from Finnhub`,
+        toast.success("Using real-time IndianAPI.in data", {
+          description: `Loaded ${realTimeStocks.length} stocks from Indian Stock Market API`,
         });
       } else {
         throw new Error("No stocks returned from API");
       }
     } catch (error) {
       console.error("Failed to load real-time data:", error);
-      setApiError(error instanceof Error ? error.message : "Failed to connect to Finnhub API");
+      setApiError(error instanceof Error ? error.message : "Failed to connect to Indian Stock Market API");
       
       const initialStocks = generateInitialStocks();
       setStocks(initialStocks);
@@ -136,7 +135,7 @@ const Index = () => {
     updateIntervalRef.current = window.setInterval(() => {
       if (usingRealData) {
         loadRealTimeData();
-        console.log("Refreshed real-time data from Finnhub");
+        console.log("Refreshed real-time data from IndianAPI.in");
       } else {
         setStocks(prev => updateStockPrices(prev));
       }
@@ -211,7 +210,7 @@ const Index = () => {
         <div className="sticky top-20 z-40 bg-background/80 backdrop-blur-sm pt-4 pb-4 px-2 md:px-4 mb-8">
           <div className="flex flex-col items-center animate-fade-in">
             <h1 className="text-2xl md:text-3xl font-bold text-center mb-3">
-              Stock Market Visualization
+              Indian Stock Market Visualization
               {usingRealData && (
                 <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">
                   {dataSource} Live Data
@@ -219,7 +218,7 @@ const Index = () => {
               )}
             </h1>
             <p className="text-muted-foreground text-center max-w-2xl mb-4">
-              Explore the stock market with interactive bubbles. Size represents market cap, 
+              Explore the Indian stock market with interactive bubbles. Size represents market cap, 
               while color indicates performance.
             </p>
             
@@ -230,7 +229,7 @@ const Index = () => {
                 <AlertDescription className="flex flex-col gap-2">
                   <div>{apiError}</div>
                   <div className="text-xs">
-                    Using simulated data instead. You can try refreshing to connect to Finnhub again.
+                    Using simulated data instead. You can try refreshing to connect to IndianAPI.in again.
                   </div>
                   <div className="flex gap-2 mt-1">
                     <button 

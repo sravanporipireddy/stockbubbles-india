@@ -22,11 +22,6 @@ if (typeof window !== 'undefined') {
   if (!window.fetch) {
     console.warn('Fetch API is not supported in this browser. API calls may not work correctly.');
   }
-  
-  // Ensure global.fetch exists for Node-based libraries that expect it
-  if (typeof global !== 'undefined' && !global.fetch && window.fetch) {
-    (global as any).fetch = window.fetch;
-  }
 }
 
 // Make sure this module is always imported first to ensure polyfills are applied

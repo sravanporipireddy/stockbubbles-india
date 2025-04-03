@@ -2,7 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { TrendingUp, TrendingDown, DollarSign, ExternalLink } from 'lucide-react';
+import { TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
 import { formatPercentage, formatNumber } from '@/lib/stockUtils';
 
 interface FooterProps {
@@ -24,7 +24,7 @@ const Footer: React.FC<FooterProps> = ({
   sectorPerformance, 
   indexData, 
   usingRealData,
-  dataSource = "Finnhub" 
+  dataSource = "IndianAPI.in" 
 }) => {
   return (
     <motion.footer 
@@ -47,8 +47,7 @@ const Footer: React.FC<FooterProps> = ({
                   <div>
                     <h4 className="font-medium">{index.name}</h4>
                     <div className="flex items-center mt-1 text-sm">
-                      <DollarSign size={14} className="mr-1" />
-                      <span>{index.value.toLocaleString()}</span>
+                      <span>₹{index.value.toLocaleString()}</span>
                     </div>
                   </div>
                   <div className={`flex items-center ${index.changePercent >= 0 ? 'text-profit' : 'text-loss'}`}>
@@ -77,7 +76,7 @@ const Footer: React.FC<FooterProps> = ({
                     <div>
                       <h4 className="font-medium">{sector.name}</h4>
                       <div className="text-xs text-muted-foreground mt-1">
-                        Market Cap: ${formatNumber(sector.marketCap)}
+                        Market Cap: ₹{formatNumber(sector.marketCap)}
                       </div>
                     </div>
                     <div className={`flex items-center ${sector.changePercent >= 0 ? 'text-profit' : 'text-loss'}`}>
@@ -97,14 +96,14 @@ const Footer: React.FC<FooterProps> = ({
         
         <div className="flex justify-center mt-6 text-sm text-muted-foreground">
           <p>{!usingRealData ? "Data is simulated for demonstration purposes" : `Data from ${dataSource}`}</p>
-          {usingRealData && dataSource === "Finnhub" && (
+          {usingRealData && dataSource === "IndianAPI.in" && (
             <a 
-              href="https://finnhub.io/" 
+              href="https://indianapi.in/indian-stock-market/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="inline-flex items-center ml-4 text-primary hover:underline"
             >
-              Finnhub API <ExternalLink size={12} className="ml-1" />
+              Indian Stock Market API <ExternalLink size={12} className="ml-1" />
             </a>
           )}
         </div>

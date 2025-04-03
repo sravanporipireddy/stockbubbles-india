@@ -6,7 +6,6 @@ import {
   TrendingDown, 
   BarChart4, 
   Activity, 
-  DollarSign,
   Info,
   Building2 
 } from 'lucide-react';
@@ -63,9 +62,8 @@ const InfoPanel: React.FC<InfoPanelProps> = ({ stock, onClose }) => {
               <h2 className="text-2xl font-bold">{stock.symbol}</h2>
               <p className="text-muted-foreground">{stock.name}</p>
               <div className="flex items-baseline mt-1">
-                <span className="text-xl font-semibold flex items-center">
-                  <DollarSign size={18} />
-                  {stock.price.toFixed(2)}
+                <span className="text-xl font-semibold">
+                  ₹{stock.price.toFixed(2)}
                 </span>
                 <span className={`ml-2 ${changeTextColor}`}>
                   {formatPercentage(stock.changePercent)}

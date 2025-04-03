@@ -2,8 +2,6 @@
 import './polyfills';
 
 import { Stock } from './mockData';
-// Import Finnhub correctly - using require syntax for compatibility
-const finnhub = require('finnhub');
 
 // Function to format large numbers with commas and abbreviations
 export const formatNumber = (num: number): string => {
@@ -19,9 +17,9 @@ export const formatNumber = (num: number): string => {
   return num.toString();
 };
 
-// Function to format currency values (in $)
+// Function to format currency values (in ₹)
 export const formatCurrency = (value: number): string => {
-  return '$' + formatNumber(value);
+  return '₹' + formatNumber(value);
 };
 
 // Function to format percentage changes
@@ -123,85 +121,63 @@ export const getMaxMarketCap = (stocks: Stock[]): number => {
   return Math.max(...stocks.map(stock => stock.marketCap));
 };
 
-// Initialize Finnhub client with demo API key
-// Users should replace this with their own API key
-const API_KEY = 'cphvjmir01qiijru5c6g'; // Demo key from Finnhub docs
-
-// Initialize finnhub client properly with error handling
-let finnhubClient: any;
-try {
-  const api = new finnhub.DefaultApi();
-  api.apiKey = API_KEY;
-  finnhubClient = api;
-  console.log('Finnhub client initialized successfully');
-} catch (error) {
-  console.error('Failed to initialize Finnhub client:', error);
-  finnhubClient = null;
-}
-
-// Helper function to safely make Finnhub API calls
-const makeFinnhubRequest = (method: string, params: any): Promise<any> => {
-  return new Promise((resolve, reject) => {
-    if (!finnhubClient) {
-      reject(new Error('Finnhub client is not initialized'));
-      return;
+// Helper function to make the API requests to indianapi.in
+const makeApiRequest = async (endpoint: string): Promise<any> => {
+  try {
+    const response = await fetch(`https://indianapi.in/stock-market${endpoint}`);
+    if (!response.ok) {
+      throw new Error(`API responded with status: ${response.status}`);
     }
-    
-    try {
-      // @ts-ignore - We know this method exists on the client
-      finnhubClient[method](params, (error: any, data: any) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(data);
-        }
-      });
-    } catch (error) {
-      reject(error);
-    }
-  });
+    return await response.json();
+  } catch (error) {
+    console.error(`API request failed for ${endpoint}:`, error);
+    throw error;
+  }
 };
 
-// Function to fetch stocks from Finnhub API
+// Function to fetch stocks from the Indian Stock Market API
 export const fetchStocks = async (): Promise<Stock[]> => {
   try {
-    // Use a selection of popular stocks as a sample
-    const symbols = ['AAPL', 'MSFT', 'AMZN', 'GOOGL', 'META', 'TSLA', 'NVDA', 'JPM', 'BAC', 'WMT'];
+    // Fetch top stocks from the NSE endpoint
+    const topStocksData = await makeApiRequest('/nse/top-gainers-nse/');
+    const nifty50Data = await makeApiRequest('/nse/nifty-50/');
     
-    const stocks: Stock[] = [];
-    
-    await Promise.all(symbols.map(async (symbol) => {
-      try {
-        // Get company profile
-        const profileData: any = await makeFinnhubRequest('companyProfile2', { symbol });
-        
-        // Get quote data
-        const quoteData: any = await makeFinnhubRequest('quote', { symbol });
-        
-        if (profileData && quoteData) {
-          const stock: Stock = {
-            id: symbol,
-            symbol: symbol,
-            name: profileData.name || symbol,
-            price: quoteData.c || 0,
-            previousPrice: quoteData.pc || 0,
-            change: quoteData.c - quoteData.pc,
-            changePercent: ((quoteData.c - quoteData.pc) / quoteData.pc) * 100,
-            marketCap: profileData.marketCapitalization * 1000000 || 1000000000,
-            volume: quoteData.v || 0,
-            sector: profileData.finnhubIndustry || 'Unknown'
-          };
-          
-          stocks.push(stock);
-        }
-      } catch (symbolError) {
-        console.error(`Error fetching data for ${symbol}:`, symbolError);
+    // Combine the two datasets and remove duplicates
+    const combinedStocksData = [...topStocksData.data, ...nifty50Data.data];
+    const uniqueSymbols = new Set();
+    const uniqueStocks = combinedStocksData.filter((stock: any) => {
+      if (uniqueSymbols.has(stock.symbol)) {
+        return false;
       }
-    }));
+      uniqueSymbols.add(stock.symbol);
+      return true;
+    });
+    
+    // Create stock objects from the API data
+    const stocks: Stock[] = uniqueStocks.map((stock: any) => {
+      // Calculate change and changePercent
+      const price = parseFloat(stock.lastPrice) || 0;
+      const previousPrice = parseFloat(stock.previousClose) || price;
+      const change = price - previousPrice;
+      const changePercent = previousPrice ? (change / previousPrice) * 100 : 0;
+      
+      return {
+        id: stock.symbol,
+        symbol: stock.symbol,
+        name: stock.companyName || stock.symbol,
+        price: price,
+        previousPrice: previousPrice,
+        change: change,
+        changePercent: changePercent,
+        marketCap: parseFloat(stock.marketCap) || 1000000000,
+        volume: parseFloat(stock.totalTradedVolume) || 0,
+        sector: stock.series || 'Unknown'
+      };
+    });
     
     return stocks;
   } catch (error) {
-    console.error("Error fetching stocks from Finnhub:", error);
+    console.error("Error fetching stocks from Indian Stock Market API:", error);
     throw error;
   }
 };
@@ -209,34 +185,42 @@ export const fetchStocks = async (): Promise<Stock[]> => {
 // Function to fetch market indices data
 export const fetchIndices = async () => {
   try {
-    const indices = [
-      { symbol: 'SPY', name: 'S&P 500' },
-      { symbol: 'DIA', name: 'Dow Jones' },
-      { symbol: 'QQQ', name: 'NASDAQ' },
-      { symbol: 'VIX', name: 'Volatility Index' },
+    const niftyData = await makeApiRequest('/nse/indices/');
+    
+    // Extract the main indices from the response
+    const mainIndices = [
+      'NIFTY 50',
+      'NIFTY BANK',
+      'NIFTY IT',
+      'INDIA VIX'
     ];
     
-    const result = await Promise.all(indices.map(async (index) => {
-      try {
-        const quoteData: any = await makeFinnhubRequest('quote', { symbol: index.symbol });
+    const result = niftyData.data
+      .filter((index: any) => mainIndices.includes(index.indexName))
+      .map((index: any) => {
+        const value = parseFloat(index.lastPrice) || 0;
+        const previousValue = parseFloat(index.previousClose) || value;
+        const changePercent = ((value - previousValue) / previousValue) * 100;
         
-        if (quoteData) {
-          return {
-            name: index.name,
-            value: quoteData.c || 0,
-            changePercent: ((quoteData.c - quoteData.pc) / quoteData.pc) * 100
-          };
-        }
-        return null;
-      } catch (error) {
-        console.error(`Error fetching data for index ${index.symbol}:`, error);
-        return null;
-      }
-    }));
+        return {
+          name: index.indexName,
+          value: value,
+          changePercent: changePercent
+        };
+      });
     
-    return result.filter(Boolean);
+    // If we have fewer than 4 indices, add placeholders for missing ones
+    while (result.length < 4) {
+      result.push({
+        name: `Index ${result.length + 1}`,
+        value: 0,
+        changePercent: 0
+      });
+    }
+    
+    return result;
   } catch (error) {
-    console.error("Error fetching indices:", error);
+    console.error("Error fetching indices from Indian Stock Market API:", error);
     throw error;
   }
 };
@@ -244,43 +228,35 @@ export const fetchIndices = async () => {
 // Function to fetch sector performance
 export const fetchSectorPerformance = async () => {
   try {
-    const sectorETFs = [
-      { symbol: 'XLK', name: 'Technology' },
-      { symbol: 'XLF', name: 'Financial' },
-      { symbol: 'XLV', name: 'Healthcare' },
-      { symbol: 'XLE', name: 'Energy' },
-      { symbol: 'XLI', name: 'Industrial' },
-      { symbol: 'XLP', name: 'Consumer Staples' },
-      { symbol: 'XLY', name: 'Consumer Discretionary' },
-      { symbol: 'XLB', name: 'Materials' },
-      { symbol: 'XLU', name: 'Utilities' },
-      { symbol: 'XLRE', name: 'Real Estate' },
-    ];
+    const sectorsData = await makeApiRequest('/nse/indices/');
     
-    const result = await Promise.all(sectorETFs.map(async (sector) => {
-      try {
-        const quoteData: any = await makeFinnhubRequest('quote', { symbol: sector.symbol });
-        
-        // Get a rough market cap estimate for the sector (this is simplified)
-        const marketCap = Math.random() * 10000000000 + 1000000000;
-        
-        if (quoteData) {
-          return {
-            name: sector.name,
-            changePercent: ((quoteData.c - quoteData.pc) / quoteData.pc) * 100,
-            marketCap: marketCap
-          };
-        }
-        return null;
-      } catch (error) {
-        console.error(`Error fetching data for sector ${sector.symbol}:`, error);
-        return null;
-      }
-    }));
+    // Extract sector indices
+    const sectorIndices = sectorsData.data.filter((index: any) => 
+      index.indexName.includes('NIFTY') && 
+      !['NIFTY 50', 'NIFTY BANK', 'NIFTY NEXT 50', 'NIFTY 100'].includes(index.indexName)
+    );
     
-    return result.filter(Boolean);
+    const result = sectorIndices.slice(0, 10).map((sector: any) => {
+      const value = parseFloat(sector.lastPrice) || 0;
+      const previousValue = parseFloat(sector.previousClose) || value;
+      const changePercent = ((value - previousValue) / previousValue) * 100;
+      
+      // Convert index name to a sector name (e.g., "NIFTY IT" -> "IT")
+      let name = sector.indexName.replace('NIFTY ', '');
+      name = name.split(' ').map((word: string) => 
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      ).join(' ');
+      
+      return {
+        name: name,
+        changePercent: changePercent,
+        marketCap: parseFloat(sector.marketCapitalisation) || 1000000000
+      };
+    });
+    
+    return result;
   } catch (error) {
-    console.error("Error fetching sector performance:", error);
+    console.error("Error fetching sector performance from Indian Stock Market API:", error);
     throw error;
   }
 };
