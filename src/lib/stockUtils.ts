@@ -1,4 +1,3 @@
-
 import './polyfills';
 
 import { Stock } from './mockData';
@@ -43,7 +42,7 @@ export const getBubbleColor = (changePercent: number): string => {
   return 'bg-gradient-to-br from-red-500 to-red-700 shadow-md shadow-red-600/20';
 };
 
-// Improved function to determine bubble size based on market cap with more natural distribution
+// Function to determine bubble size based on market cap
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
   const minSize = 40; // Minimum bubble size
   const maxSize = 120; // Maximum bubble size
@@ -121,13 +120,23 @@ export const getMaxMarketCap = (stocks: Stock[]): number => {
   return Math.max(...stocks.map(stock => stock.marketCap));
 };
 
+// API key for IndianAPI.in
+const API_KEY = 'sk-live-FzUh40xZf0dIYHahCCt8hc0Kiy84tOZ620CN2Mmm';
+
 // Helper function to make the API requests to indianapi.in
 const makeApiRequest = async (endpoint: string): Promise<any> => {
   try {
-    const response = await fetch(`https://indianapi.in/stock-market${endpoint}`);
+    const response = await fetch(`https://indianapi.in/sandbox/stock${endpoint}`, {
+      headers: {
+        'Authorization': `Bearer ${API_KEY}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    
     if (!response.ok) {
       throw new Error(`API responded with status: ${response.status}`);
     }
+    
     return await response.json();
   } catch (error) {
     console.error(`API request failed for ${endpoint}:`, error);
@@ -138,40 +147,33 @@ const makeApiRequest = async (endpoint: string): Promise<any> => {
 // Function to fetch stocks from the Indian Stock Market API
 export const fetchStocks = async (): Promise<Stock[]> => {
   try {
-    // Fetch top stocks from the NSE endpoint
-    const topStocksData = await makeApiRequest('/nse/top-gainers-nse/');
-    const nifty50Data = await makeApiRequest('/nse/nifty-50/');
+    // Fetch top stocks from the NSE endpoint (using sandbox endpoint)
+    const stocksResponse = await makeApiRequest('/nifty50');
     
-    // Combine the two datasets and remove duplicates
-    const combinedStocksData = [...topStocksData.data, ...nifty50Data.data];
-    const uniqueSymbols = new Set();
-    const uniqueStocks = combinedStocksData.filter((stock: any) => {
-      if (uniqueSymbols.has(stock.symbol)) {
-        return false;
-      }
-      uniqueSymbols.add(stock.symbol);
-      return true;
-    });
+    if (!stocksResponse.data || !Array.isArray(stocksResponse.data)) {
+      throw new Error("Invalid response format from API");
+    }
     
     // Create stock objects from the API data
-    const stocks: Stock[] = uniqueStocks.map((stock: any) => {
-      // Calculate change and changePercent
-      const price = parseFloat(stock.lastPrice) || 0;
-      const previousPrice = parseFloat(stock.previousClose) || price;
+    const stocks: Stock[] = stocksResponse.data.map((stock: any, index: number) => {
+      // Extract and parse numeric values safely
+      const price = parseFloat(stock.last_price) || 0;
+      const previousPrice = parseFloat(stock.prev_close) || price;
       const change = price - previousPrice;
       const changePercent = previousPrice ? (change / previousPrice) * 100 : 0;
+      const marketCap = parseFloat(stock.market_cap) || (1000000000 * (index + 1));
       
       return {
-        id: stock.symbol,
-        symbol: stock.symbol,
-        name: stock.companyName || stock.symbol,
+        id: stock.symbol || `STOCK${index}`,
+        symbol: stock.symbol || `STOCK${index}`,
+        name: stock.name || stock.symbol || `Stock ${index}`,
         price: price,
         previousPrice: previousPrice,
         change: change,
         changePercent: changePercent,
-        marketCap: parseFloat(stock.marketCap) || 1000000000,
-        volume: parseFloat(stock.totalTradedVolume) || 0,
-        sector: stock.series || 'Unknown'
+        marketCap: marketCap,
+        volume: parseFloat(stock.volume) || (100000 * (index + 1)),
+        sector: stock.sector || 'Technology'  // Default to Technology if sector is not provided
       };
     });
     
@@ -185,7 +187,11 @@ export const fetchStocks = async (): Promise<Stock[]> => {
 // Function to fetch market indices data
 export const fetchIndices = async () => {
   try {
-    const niftyData = await makeApiRequest('/nse/indices/');
+    const indicesResponse = await makeApiRequest('/indices');
+    
+    if (!indicesResponse.data || !Array.isArray(indicesResponse.data)) {
+      throw new Error("Invalid indices response format from API");
+    }
     
     // Extract the main indices from the response
     const mainIndices = [
@@ -195,30 +201,34 @@ export const fetchIndices = async () => {
       'INDIA VIX'
     ];
     
-    const result = niftyData.data
-      .filter((index: any) => mainIndices.includes(index.indexName))
+    const result = indicesResponse.data
+      .filter((index: any) => mainIndices.includes(index.name))
       .map((index: any) => {
-        const value = parseFloat(index.lastPrice) || 0;
-        const previousValue = parseFloat(index.previousClose) || value;
+        const value = parseFloat(index.last_price) || 0;
+        const previousValue = parseFloat(index.prev_close) || value;
         const changePercent = ((value - previousValue) / previousValue) * 100;
         
         return {
-          name: index.indexName,
+          name: index.name,
           value: value,
           changePercent: changePercent
         };
       });
     
     // If we have fewer than 4 indices, add placeholders for missing ones
-    while (result.length < 4) {
-      result.push({
-        name: `Index ${result.length + 1}`,
-        value: 0,
-        changePercent: 0
-      });
-    }
+    const existingIndices = result.map(idx => idx.name);
+    mainIndices.forEach(indexName => {
+      if (!existingIndices.includes(indexName)) {
+        result.push({
+          name: indexName,
+          value: 0,
+          changePercent: 0
+        });
+      }
+    });
     
-    return result;
+    // Ensure we only have the exact 4 main indices
+    return result.slice(0, 4);
   } catch (error) {
     console.error("Error fetching indices from Indian Stock Market API:", error);
     throw error;
@@ -228,29 +238,19 @@ export const fetchIndices = async () => {
 // Function to fetch sector performance
 export const fetchSectorPerformance = async () => {
   try {
-    const sectorsData = await makeApiRequest('/nse/indices/');
+    const sectorsResponse = await makeApiRequest('/sectors');
     
-    // Extract sector indices
-    const sectorIndices = sectorsData.data.filter((index: any) => 
-      index.indexName.includes('NIFTY') && 
-      !['NIFTY 50', 'NIFTY BANK', 'NIFTY NEXT 50', 'NIFTY 100'].includes(index.indexName)
-    );
+    if (!sectorsResponse.data || !Array.isArray(sectorsResponse.data)) {
+      throw new Error("Invalid sectors response format from API");
+    }
     
-    const result = sectorIndices.slice(0, 10).map((sector: any) => {
-      const value = parseFloat(sector.lastPrice) || 0;
-      const previousValue = parseFloat(sector.previousClose) || value;
-      const changePercent = ((value - previousValue) / previousValue) * 100;
-      
-      // Convert index name to a sector name (e.g., "NIFTY IT" -> "IT")
-      let name = sector.indexName.replace('NIFTY ', '');
-      name = name.split(' ').map((word: string) => 
-        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
-      ).join(' ');
+    const result = sectorsResponse.data.slice(0, 10).map((sector: any) => {
+      const changePercent = parseFloat(sector.performance) || 0;
       
       return {
-        name: name,
+        name: sector.name || 'Unknown Sector',
         changePercent: changePercent,
-        marketCap: parseFloat(sector.marketCapitalisation) || 1000000000
+        marketCap: parseFloat(sector.market_cap) || 1000000000
       };
     });
     
