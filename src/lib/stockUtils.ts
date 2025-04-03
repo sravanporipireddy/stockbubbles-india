@@ -124,14 +124,14 @@ export const getMaxMarketCap = (stocks: Stock[]): number => {
 // API key for IndianAPI.in
 const API_KEY = 'sk-live-FzUh40xZf0dIYHahCCt8hc0Kiy84tOZ620CN2Mmm';
 
-// Helper function to make the API requests to indianapi.in
+// Helper function to make the API requests to indianapi.in with the new base URL and auth method
 const makeApiRequest = async (endpoint: string): Promise<any> => {
   try {
-    console.log(`Making API request to: https://indianapi.in/api/v1${endpoint}`);
+    console.log(`Making API request to: https://stock.indianapi.in${endpoint}`);
     
-    const response = await fetch(`https://indianapi.in/api/v1${endpoint}`, {
+    const response = await fetch(`https://stock.indianapi.in${endpoint}`, {
       headers: {
-        'Authorization': `Bearer ${API_KEY}`,
+        'x-api-key': API_KEY,
         'Content-Type': 'application/json'
       }
     });
@@ -150,35 +150,35 @@ const makeApiRequest = async (endpoint: string): Promise<any> => {
 // Function to fetch stocks from the Indian Stock Market API
 export const fetchStocks = async (): Promise<Stock[]> => {
   try {
-    // Fetch top stocks from the stock endpoint using the correct path
-    const stocksResponse = await makeApiRequest('/stock/nifty50');
+    // Fetch most active stocks using the new endpoint
+    const stocksResponse = await makeApiRequest('/NSE_most_active');
     
     console.log("API Response:", stocksResponse);
     
-    if (!stocksResponse.data || !Array.isArray(stocksResponse.data)) {
+    if (!stocksResponse || !Array.isArray(stocksResponse)) {
       throw new Error("Invalid response format from API");
     }
     
     // Create stock objects from the API data
-    const stocks: Stock[] = stocksResponse.data.map((stock: any, index: number) => {
+    const stocks: Stock[] = stocksResponse.map((stock: any, index: number) => {
       // Extract and parse numeric values safely
-      const price = parseFloat(stock.last_price) || 0;
-      const previousPrice = parseFloat(stock.prev_close) || price;
+      const price = parseFloat(stock.lastPrice) || 0;
+      const previousPrice = parseFloat(stock.previousClose) || price;
       const change = price - previousPrice;
       const changePercent = previousPrice ? (change / previousPrice) * 100 : 0;
-      const marketCap = parseFloat(stock.market_cap) || (1000000000 * (index + 1));
+      const marketCap = parseFloat(stock.marketCap) || (1000000000 * (index + 1));
       
       return {
         id: stock.symbol || `STOCK${index}`,
         symbol: stock.symbol || `STOCK${index}`,
-        name: stock.name || stock.symbol || `Stock ${index}`,
+        name: stock.companyName || stock.symbol || `Stock ${index}`,
         price: price,
         previousPrice: previousPrice,
         change: change,
         changePercent: changePercent,
         marketCap: marketCap,
-        volume: parseFloat(stock.volume) || (100000 * (index + 1)),
-        sector: stock.sector || 'Technology'  // Default to Technology if sector is not provided
+        volume: parseFloat(stock.totalTradedValue) || (100000 * (index + 1)),
+        sector: stock.industry || 'Technology'  // Default to Technology if sector is not provided
       };
     });
     
@@ -192,11 +192,11 @@ export const fetchStocks = async (): Promise<Stock[]> => {
 // Function to fetch market indices data
 export const fetchIndices = async () => {
   try {
-    const indicesResponse = await makeApiRequest('/stock/indices');
+    const indicesResponse = await makeApiRequest('/NSE_indices');
     
     console.log("Indices Response:", indicesResponse);
     
-    if (!indicesResponse.data || !Array.isArray(indicesResponse.data)) {
+    if (!indicesResponse || !Array.isArray(indicesResponse)) {
       throw new Error("Invalid indices response format from API");
     }
     
@@ -208,11 +208,11 @@ export const fetchIndices = async () => {
       'INDIA VIX'
     ];
     
-    const result = indicesResponse.data
+    const result = indicesResponse
       .filter((index: any) => mainIndices.includes(index.name))
       .map((index: any) => {
-        const value = parseFloat(index.last_price) || 0;
-        const previousValue = parseFloat(index.prev_close) || value;
+        const value = parseFloat(index.lastPrice) || 0;
+        const previousValue = parseFloat(index.previousClose) || value;
         const changePercent = ((value - previousValue) / previousValue) * 100;
         
         return {
@@ -245,21 +245,21 @@ export const fetchIndices = async () => {
 // Function to fetch sector performance
 export const fetchSectorPerformance = async () => {
   try {
-    const sectorsResponse = await makeApiRequest('/stock/sectors');
+    const sectorsResponse = await makeApiRequest('/NSE_sectors');
     
     console.log("Sectors Response:", sectorsResponse);
     
-    if (!sectorsResponse.data || !Array.isArray(sectorsResponse.data)) {
+    if (!sectorsResponse || !Array.isArray(sectorsResponse)) {
       throw new Error("Invalid sectors response format from API");
     }
     
-    const result = sectorsResponse.data.slice(0, 10).map((sector: any) => {
-      const changePercent = parseFloat(sector.performance) || 0;
+    const result = sectorsResponse.slice(0, 10).map((sector: any) => {
+      const changePercent = parseFloat(sector.percentChange) || 0;
       
       return {
-        name: sector.name || 'Unknown Sector',
+        name: sector.sectorName || 'Unknown Sector',
         changePercent: changePercent,
-        marketCap: parseFloat(sector.market_cap) || 1000000000
+        marketCap: parseFloat(sector.marketCap) || 1000000000
       };
     });
     
