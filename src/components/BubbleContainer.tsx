@@ -101,7 +101,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       return;
     }
 
-    // Create nodes from stocks
+    // Create nodes from stocks - always initialize at the center of the screen
     const newNodes: NodeDatum[] = stocks.map((stock, index) => {
       const r = getBubbleSize(stock.marketCap, maxMarketCap) / 2; // Divide by 2 to convert diameter to radius for d3
       const existingNode = previousNodesRef.current.get(stock.id);
@@ -116,14 +116,15 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         };
       }
       
+      // Initialize all nodes at the center of the container with minimal randomness
+      // to prevent overlapping but still keep them centered
       return {
         id: stock.id,
         index,
         r,
         stock,
-        // Initialize with positions spread throughout container, not just top-left
-        x: Math.random() * containerDimensions.width,
-        y: Math.random() * containerDimensions.height
+        x: containerDimensions.width / 2 + (Math.random() - 0.5) * 20, // Very small random offset
+        y: containerDimensions.height / 2 + (Math.random() - 0.5) * 20  // Very small random offset
       };
     });
 

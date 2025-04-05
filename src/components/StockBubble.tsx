@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Stock } from '@/lib/mockData';
@@ -33,8 +34,10 @@ const StockBubble: React.FC<StockBubbleProps> = ({
     <motion.div
       className="absolute cursor-pointer stock-bubble"
       initial={{ 
-        scale: 0,
+        scale: 0.5,
         opacity: 0,
+        x: position.x,
+        y: position.y,
       }}
       animate={{ 
         scale: 1, 
