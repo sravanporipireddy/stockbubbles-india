@@ -28,6 +28,31 @@ const makeApiRequest = async (endpoint: string): Promise<any> => {
   }
 };
 
+// Sample response structure from IndianAPI.in:
+/*
+{
+  "ticker": "ZOMT.NS",
+  "company": "Zomato",
+  "price": 210.9,
+  "percent_change": -0.53,
+  "net_change": -1.13,
+  "bid": 210.9,
+  "ask": 0,
+  "high": 214,
+  "low": 208,
+  "open": 208.15,
+  "low_circuit_limit": 190.82,
+  "up_circuit_limit": 233.23,
+  "volume": 44447473,
+  "close": 212.03,
+  "overall_rating": "Bearish",
+  "short_term_trend": "Bearish",
+  "long_term_trend": "Bearish",
+  "52_week_low": 146.3,
+  "52_week_high": 304.7
+}
+*/
+
 // Function to fetch stocks from the Indian Stock Market API
 export const fetchStocks = async (): Promise<Stock[]> => {
   try {
@@ -42,24 +67,41 @@ export const fetchStocks = async (): Promise<Stock[]> => {
     
     // Create stock objects from the API data
     const stocks: Stock[] = stocksResponse.map((stock: any, index: number) => {
+      // Extract ticker symbol (removing .NS suffix if present)
+      const symbol = stock.ticker ? stock.ticker.replace('.NS', '') : `STOCK${index}`;
+      
       // Extract and parse numeric values safely
-      const price = parseFloat(stock.lastPrice) || 0;
-      const previousPrice = parseFloat(stock.previousClose) || price;
-      const change = price - previousPrice;
-      const changePercent = previousPrice ? (change / previousPrice) * 100 : 0;
-      const marketCap = parseFloat(stock.marketCap) || (1000000000 * (index + 1));
+      const price = parseFloat(stock.price) || 0;
+      const previousPrice = parseFloat(stock.close) || price;
+      const change = parseFloat(stock.net_change) || 0;
+      const changePercent = parseFloat(stock.percent_change) || 0;
+      const volume = parseFloat(stock.volume) || (100000 * (index + 1));
+      
+      // Determine sector based on available information
+      let sector = 'Miscellaneous';
+      
+      // Map ratings to sectors as a fallback if no industry data
+      if (stock.overall_rating) {
+        if (stock.overall_rating.includes('Bullish')) {
+          sector = 'Technology';
+        } else if (stock.overall_rating.includes('Bearish')) {
+          sector = 'Consumer Services';
+        } else {
+          sector = 'Financial';
+        }
+      }
       
       return {
-        id: stock.symbol || `STOCK${index}`,
-        symbol: stock.symbol || `STOCK${index}`,
-        name: stock.companyName || stock.symbol || `Stock ${index}`,
+        id: symbol,
+        symbol: symbol,
+        name: stock.company || symbol,
         price: price,
         previousPrice: previousPrice,
         change: change,
         changePercent: changePercent,
-        marketCap: marketCap,
-        volume: parseFloat(stock.totalTradedValue) || (100000 * (index + 1)),
-        sector: stock.industry || 'Technology'  // Default to Technology if sector is not provided
+        marketCap: volume * price, // Estimating market cap as volume * price
+        volume: volume,
+        sector: sector
       };
     });
     
