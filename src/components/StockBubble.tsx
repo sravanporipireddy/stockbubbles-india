@@ -33,25 +33,26 @@ const StockBubble: React.FC<StockBubbleProps> = ({
   return (
     <motion.div
       className="absolute cursor-pointer stock-bubble"
+      // Set both initial and animate to the same position to remove spreading animation
       initial={{ 
-        scale: 0.5,
-        opacity: 0,
-        x: position.x,
-        y: position.y,
-      }}
-      animate={{ 
-        scale: 1, 
         opacity: 1,
         x: position.x,
         y: position.y,
+        scale: 1
       }}
+      animate={{ 
+        opacity: 1,
+        x: position.x,
+        y: position.y,
+        scale: 1
+      }}
+      // Remove any delay to prevent the staggered animation
       transition={{ 
         type: "spring",
-        stiffness: 30,
-        damping: 25,
-        delay: 0.01 * index,
+        stiffness: 120,
+        damping: 20,
+        delay: 0,
       }}
-      exit={{ scale: 0, opacity: 0 }}
       style={{ 
         width: bubbleSize, 
         height: bubbleSize,
