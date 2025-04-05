@@ -60,50 +60,17 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     }
   }, [nodes]);
 
-  // Create and run the simulation only once on initial render,
-  // or when stocks array changes significantly in size
+  // Update nodes when stocks change
   useEffect(() => {
-    // Skip if no stocks or if just updating stock data without changing count
+    // Skip if no stocks
     if (stocks.length === 0) {
       setNodes([]);
       return;
     }
 
-    // Check if we just need to update existing nodes rather than recreate simulation
-    if (initialLayoutComplete && Math.abs(stocks.length - nodes.length) < 5) {
-      // Update existing nodes with new stock data but keep positions
-      const updatedNodes = stocks.map((stock, index) => {
-        const r = getBubbleSize(stock.marketCap, maxMarketCap) / 2;
-        const existingNode = previousNodesRef.current.get(stock.id);
-        
-        // If this stock existed before, maintain its position
-        if (existingNode) {
-          return {
-            ...existingNode,
-            stock,
-            r,
-            index
-          };
-        }
-        
-        // For new stocks, place them near the center with some randomness
-        return {
-          id: stock.id,
-          index,
-          r,
-          stock,
-          x: containerDimensions.width / 2 + (Math.random() - 0.5) * 100,
-          y: containerDimensions.height / 2 + (Math.random() - 0.5) * 100
-        };
-      });
-      
-      setNodes(updatedNodes);
-      return;
-    }
-
-    // Create nodes from stocks - always initialize at the center of the screen
-    const newNodes: NodeDatum[] = stocks.map((stock, index) => {
-      const r = getBubbleSize(stock.marketCap, maxMarketCap) / 2; // Divide by 2 to convert diameter to radius for d3
+    // Always maintain existing positions for stocks that stay the same
+    const updatedNodes = stocks.map((stock, index) => {
+      const r = getBubbleSize(stock.marketCap, maxMarketCap) / 2;
       const existingNode = previousNodesRef.current.get(stock.id);
       
       // If this stock existed before, maintain its position
@@ -116,27 +83,36 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         };
       }
       
-      // Initialize all nodes at the center of the container with minimal randomness
-      // to prevent overlapping but still keep them centered
+      // For new stocks, place them at the center with minimal randomness
       return {
         id: stock.id,
         index,
         r,
         stock,
-        x: containerDimensions.width / 2 + (Math.random() - 0.5) * 20, // Very small random offset
-        y: containerDimensions.height / 2 + (Math.random() - 0.5) * 20  // Very small random offset
+        x: containerDimensions.width / 2 + (Math.random() - 0.5) * 20,
+        y: containerDimensions.height / 2 + (Math.random() - 0.5) * 20
       };
     });
+    
+    // If we don't have positions yet or simulation isn't complete
+    if (!initialLayoutComplete) {
+      runSimulation(updatedNodes);
+    } else {
+      setNodes(updatedNodes);
+    }
+  }, [stocks, maxMarketCap, containerDimensions, initialLayoutComplete]);
 
-    // Use a much stronger collision force to ensure bubbles don't overlap
+  // Run the D3 simulation to compute bubble positions
+  const runSimulation = (nodesToSimulate: NodeDatum[]) => {
+    // Use a stronger collision force to ensure bubbles don't overlap
     const simulation = d3.forceSimulation<NodeDatum>()
-      .nodes(newNodes)
+      .nodes(nodesToSimulate)
       .alpha(0.9) // Higher alpha for more energy
       .alphaDecay(0.03) // Slower decay for better placement
       .velocityDecay(0.4) // Add some friction
       .force('center', d3.forceCenter(containerDimensions.width / 2, containerDimensions.height / 2))
       .force('charge', d3.forceManyBody().strength(-20))
-      // Much stronger collision detection with higher padding
+      // Stronger collision detection with higher padding
       .force('collide', d3.forceCollide<NodeDatum>()
         .radius(d => d.r + 15) // Add extra padding
         .strength(1) // Maximum strength
@@ -144,7 +120,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       .force('x', d3.forceX(containerDimensions.width / 2).strength(0.07))
       .force('y', d3.forceY(containerDimensions.height / 2).strength(0.07));
 
-    // Update nodes on each tick to see the simulation in progress
+    // Update nodes on each tick without animations
     simulation.on('tick', () => {
       // Ensure nodes stay within container bounds with extra padding for collision
       simulation.nodes().forEach(node => {
@@ -160,14 +136,14 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     // Store simulation reference
     simulationRef.current = simulation;
     
-    // Let simulation run for fixed duration then stop it completely
+    // Stop simulation after a short time to finalize positions
     const timer = setTimeout(() => {
       if (simulationRef.current) {
         simulationRef.current.stop();
         console.log("info: Simulation stopped permanently - positions fixed");
         setInitialLayoutComplete(true);
       }
-    }, 2000); // Let simulation run for 2 seconds then stop
+    }, 2000);
     
     return () => {
       clearTimeout(timer);
@@ -175,15 +151,12 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         simulationRef.current.stop();
       }
     };
-  }, [stocks.length, maxMarketCap, containerDimensions, initialLayoutComplete, nodes.length]);
+  };
 
   return (
-    <motion.div 
+    <div 
       ref={containerRef}
-      className="relative h-[800px] max-w-6xl mx-auto animate-fade-in z-30 mt-12 mb-16 border-transparent bubble-container"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
+      className="relative h-[800px] max-w-6xl mx-auto z-30 mt-12 mb-16 border-transparent bubble-container"
     >
       {stocks.length === 0 ? (
         <div className="text-center py-8">
@@ -206,7 +179,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
           ))}
         </>
       )}
-    </motion.div>
+    </div>
   );
 };
 

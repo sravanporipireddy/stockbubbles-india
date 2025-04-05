@@ -31,28 +31,8 @@ const StockBubble: React.FC<StockBubbleProps> = ({
   const bubbleColor = getBubbleColor(stock.changePercent);
   
   return (
-    <motion.div
+    <div
       className="absolute cursor-pointer stock-bubble"
-      // Set both initial and animate to the same position to remove spreading animation
-      initial={{ 
-        opacity: 1,
-        x: position.x,
-        y: position.y,
-        scale: 1
-      }}
-      animate={{ 
-        opacity: 1,
-        x: position.x,
-        y: position.y,
-        scale: 1
-      }}
-      // Remove any delay to prevent the staggered animation
-      transition={{ 
-        type: "spring",
-        stiffness: 120,
-        damping: 20,
-        delay: 0,
-      }}
       style={{ 
         width: bubbleSize, 
         height: bubbleSize,
@@ -60,28 +40,24 @@ const StockBubble: React.FC<StockBubbleProps> = ({
         position: 'absolute',
         left: 0,
         top: 0,
-        transform: 'translate(-50%, -50%)'
+        transform: `translate(${position.x - bubbleSize/2}px, ${position.y - bubbleSize/2}px)`,
+        transition: 'box-shadow 0.2s ease'
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
       onClick={() => onClick(stock)}
-      whileHover={{ 
-        scale: 1.15, 
-        zIndex: 100, 
-        transition: { duration: 0.2 } 
-      }}
     >
-      <motion.div 
+      <div 
         className={`absolute inset-0 rounded-full flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-2 shadow-lg`}
-        animate={{ 
+        style={{
           boxShadow: isHovering 
             ? '0 0 0 3px rgba(255,255,255,0.6), 0 8px 25px rgba(0,0,0,0.3)' 
-            : '0 4px 10px rgba(0,0,0,0.15)',
+            : '0 4px 10px rgba(0,0,0,0.15)'
         }}
       >
         <BubbleContent stock={stock} />
-      </motion.div>
-    </motion.div>
+      </div>
+    </div>
   );
 };
 

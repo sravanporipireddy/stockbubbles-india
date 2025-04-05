@@ -1,3 +1,4 @@
+
 // Import polyfills first
 import '@/lib/polyfills';
 
@@ -102,17 +103,21 @@ const Index = () => {
       console.error("Failed to load real-time data:", error);
       setApiError(error instanceof Error ? error.message : "Failed to connect to Indian Stock Market API");
       
-      const initialStocks = generateInitialStocks();
-      setStocks(initialStocks);
+      // Only set mock data if we don't already have data
+      if (stocks.length === 0) {
+        const initialStocks = generateInitialStocks();
+        setStocks(initialStocks);
+        
+        const mockSectorPerf = getSectorPerformance(initialStocks);
+        setSectorPerformance(mockSectorPerf.map(item => ({
+          name: item.name,
+          changePercent: item.changePercent,
+          marketCap: 1000000000 * (Math.random() * 10 + 1)
+        })));
+      }
+      
       setUsingRealData(false);
       setDataSource(null);
-      
-      const mockSectorPerf = getSectorPerformance(initialStocks);
-      setSectorPerformance(mockSectorPerf.map(item => ({
-        name: item.name,
-        changePercent: item.changePercent,
-        marketCap: 1000000000 * (Math.random() * 10 + 1)
-      })));
       
       toast.error("Using mock data", {
         description: "Couldn't connect to API. Using simulated data instead.",
