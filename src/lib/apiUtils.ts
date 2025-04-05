@@ -115,6 +115,7 @@ export const fetchStocks = async (): Promise<Stock[]> => {
 // Function to fetch market indices data
 export const fetchIndices = async () => {
   try {
+    // Endpoint not currently available, so we'll attempt but have fallbacks
     const indicesResponse = await makeApiRequest('/NSE_indices');
     
     console.log("Indices Response:", indicesResponse);
@@ -168,6 +169,7 @@ export const fetchIndices = async () => {
 // Function to fetch sector performance
 export const fetchSectorPerformance = async () => {
   try {
+    // Endpoint not currently available, so we'll attempt but have fallbacks
     const sectorsResponse = await makeApiRequest('/NSE_sectors');
     
     console.log("Sectors Response:", sectorsResponse);

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/visualUtils';
@@ -26,6 +25,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const simulationRef = useRef<d3.Simulation<NodeDatum, undefined> | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [initialLayoutComplete, setInitialLayoutComplete] = useState(false);
+  const previousNodesRef = useRef<Map<string, NodeDatum>>(new Map());
   
   const [containerDimensions, setContainerDimensions] = useState({
     width: Math.min(window.innerWidth * 0.9, 1200),
@@ -49,24 +49,79 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Create and run the simulation only once on initial render
+  // Save previous node positions when nodes are updated
   useEffect(() => {
-    if (initialLayoutComplete || stocks.length === 0) {
-      if (stocks.length === 0) {
-        setNodes([]);
-      }
+    if (nodes.length > 0) {
+      const nodeMap = new Map<string, NodeDatum>();
+      nodes.forEach(node => {
+        nodeMap.set(node.id, node);
+      });
+      previousNodesRef.current = nodeMap;
+    }
+  }, [nodes]);
+
+  // Create and run the simulation only once on initial render,
+  // or when stocks array changes significantly in size
+  useEffect(() => {
+    // Skip if no stocks or if just updating stock data without changing count
+    if (stocks.length === 0) {
+      setNodes([]);
+      return;
+    }
+
+    // Check if we just need to update existing nodes rather than recreate simulation
+    if (initialLayoutComplete && Math.abs(stocks.length - nodes.length) < 5) {
+      // Update existing nodes with new stock data but keep positions
+      const updatedNodes = stocks.map((stock, index) => {
+        const r = getBubbleSize(stock.marketCap, maxMarketCap) / 2;
+        const existingNode = previousNodesRef.current.get(stock.id);
+        
+        // If this stock existed before, maintain its position
+        if (existingNode) {
+          return {
+            ...existingNode,
+            stock,
+            r,
+            index
+          };
+        }
+        
+        // For new stocks, place them near the center with some randomness
+        return {
+          id: stock.id,
+          index,
+          r,
+          stock,
+          x: containerDimensions.width / 2 + (Math.random() - 0.5) * 100,
+          y: containerDimensions.height / 2 + (Math.random() - 0.5) * 100
+        };
+      });
+      
+      setNodes(updatedNodes);
       return;
     }
 
     // Create nodes from stocks
     const newNodes: NodeDatum[] = stocks.map((stock, index) => {
       const r = getBubbleSize(stock.marketCap, maxMarketCap) / 2; // Divide by 2 to convert diameter to radius for d3
+      const existingNode = previousNodesRef.current.get(stock.id);
+      
+      // If this stock existed before, maintain its position
+      if (existingNode && existingNode.x !== undefined && existingNode.y !== undefined) {
+        return {
+          ...existingNode,
+          stock,
+          r,
+          index
+        };
+      }
+      
       return {
         id: stock.id,
         index,
         r,
         stock,
-        // Initialize with random positions within container
+        // Initialize with positions spread throughout container, not just top-left
         x: Math.random() * containerDimensions.width,
         y: Math.random() * containerDimensions.height
       };
@@ -119,7 +174,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         simulationRef.current.stop();
       }
     };
-  }, [stocks.length, maxMarketCap, containerDimensions, initialLayoutComplete]);
+  }, [stocks.length, maxMarketCap, containerDimensions, initialLayoutComplete, nodes.length]);
 
   return (
     <motion.div 
