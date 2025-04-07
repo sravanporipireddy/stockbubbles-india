@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import BubbleContent from './BubbleContent';
 import { 
@@ -24,24 +24,15 @@ const StockBubble: React.FC<StockBubbleProps> = ({
   position
 }) => {
   const [isHovering, setIsHovering] = useState(false);
-  const [currentStock, setCurrentStock] = useState<Stock>(stock);
-  
-  // Update current stock only when the component has finished rendering
-  useEffect(() => {
-    // Defer state update to next tick to prevent render interruption
-    const timeoutId = setTimeout(() => {
-      setCurrentStock(stock);
-    }, 0);
-    
-    return () => clearTimeout(timeoutId);
-  }, [stock]);
+  const bubbleRef = useRef<HTMLDivElement>(null);
   
   // Calculate bubble size based on market cap
-  const bubbleSize = getBubbleSize(currentStock.marketCap, maxMarketCap);
-  const bubbleColor = getBubbleColor(currentStock.changePercent);
+  const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap);
+  const bubbleColor = getBubbleColor(stock.changePercent);
   
   return (
     <div
+      ref={bubbleRef}
       className="absolute cursor-pointer stock-bubble"
       style={{ 
         width: bubbleSize, 
@@ -51,12 +42,11 @@ const StockBubble: React.FC<StockBubbleProps> = ({
         left: 0,
         top: 0,
         transform: `translate(${position.x - bubbleSize/2}px, ${position.y - bubbleSize/2}px)`,
-        // Remove all transition animations to prevent flicker
-        transition: 'none',
+        transition: 'none'
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
-      onClick={() => onClick(currentStock)}
+      onClick={() => onClick(stock)}
     >
       <div 
         className={`absolute inset-0 rounded-full flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-2 shadow-lg`}
@@ -67,7 +57,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
           transition: 'box-shadow 0.2s ease',
         }}
       >
-        <BubbleContent stock={currentStock} />
+        <BubbleContent stock={stock} />
       </div>
     </div>
   );

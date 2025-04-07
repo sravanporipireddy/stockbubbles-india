@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/visualUtils';
@@ -20,22 +19,20 @@ interface NodeDatum extends d3.SimulationNodeDatum {
 }
 
 const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick }) => {
-  const previousStocksRef = useRef<Stock[]>([]);
-  const maxMarketCap = getMaxMarketCap(stocks.length > 0 ? stocks : previousStocksRef.current);
-  const [nodes, setNodes] = useState<NodeDatum[]>([]);
-  const [displayNodes, setDisplayNodes] = useState<NodeDatum[]>([]);
-  const simulationRef = useRef<d3.Simulation<NodeDatum, undefined> | null>(null);
+  const [visibleStocks, setVisibleStocks] = useState<Stock[]>([]);
+  const [nodePositions, setNodePositions] = useState<Map<string, {x: number, y: number}>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
-  const [initialLayoutComplete, setInitialLayoutComplete] = useState(false);
-  const previousNodesRef = useRef<Map<string, NodeDatum>>(new Map());
-  const dataUpdatePendingRef = useRef(false);
-  const isFirstRenderRef = useRef(true);
+  const simulationRef = useRef<d3.Simulation<NodeDatum, undefined> | null>(null);
+  const hasInitializedRef = useRef(false);
+  const nodesRef = useRef<NodeDatum[]>([]);
+  const [maxMarketCap, setMaxMarketCap] = useState(0);
   
   const [containerDimensions, setContainerDimensions] = useState({
     width: Math.min(window.innerWidth * 0.9, 1200),
     height: 800
   });
   
+  // Handle container resizing
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current) {
@@ -52,136 +49,124 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Store previous nodes for reference
+  // Keep a persistent simulation that can be updated
   useEffect(() => {
-    if (nodes.length > 0) {
-      const nodeMap = new Map<string, NodeDatum>();
-      nodes.forEach(node => {
-        nodeMap.set(node.id, node);
+    if (!simulationRef.current && containerDimensions.width > 0) {
+      simulationRef.current = d3.forceSimulation<NodeDatum>()
+        .alpha(0.8)
+        .alphaDecay(0.03)
+        .velocityDecay(0.4)
+        .force('center', d3.forceCenter(containerDimensions.width / 2, containerDimensions.height / 2))
+        .force('charge', d3.forceManyBody().strength(-20))
+        .force('collide', d3.forceCollide<NodeDatum>()
+          .radius(d => d.r + 15)
+          .strength(1)
+          .iterations(5))
+        .force('x', d3.forceX(containerDimensions.width / 2).strength(0.07))
+        .force('y', d3.forceY(containerDimensions.height / 2).strength(0.07));
+      
+      simulationRef.current.on('tick', () => {
+        const simulation = simulationRef.current;
+        if (!simulation) return;
+        
+        // Update positions in the Map
+        const newPositions = new Map<string, {x: number, y: number}>();
+        
+        simulation.nodes().forEach(node => {
+          // Constrain positions within bounds
+          const padding = 10;
+          node.x = Math.max(node.r + padding, Math.min(containerDimensions.width - node.r - padding, node.x || 0));
+          node.y = Math.max(node.r + padding, Math.min(containerDimensions.height - node.r - padding, node.y || 0));
+          
+          newPositions.set(node.id, {x: node.x, y: node.y});
+        });
+        
+        setNodePositions(newPositions);
       });
-      previousNodesRef.current = nodeMap;
     }
-  }, [nodes]);
+    
+    return () => {
+      if (simulationRef.current) {
+        simulationRef.current.stop();
+      }
+    };
+  }, [containerDimensions]);
 
-  // Critical effect to ensure displayNodes are updated properly
+  // Update data without fully replacing the bubbles
   useEffect(() => {
-    if (nodes.length > 0) {
-      setDisplayNodes(nodes);
-      dataUpdatePendingRef.current = false;
-    }
-  }, [nodes]);
-
-  // Store previous stocks for reference
-  useEffect(() => {
+    // Only proceed if we have stocks or already have visible stocks
+    if (stocks.length === 0 && visibleStocks.length === 0) return;
+    
     if (stocks.length > 0) {
-      previousStocksRef.current = stocks;
+      // Set the maximum market cap for consistent sizing
+      const newMaxMarketCap = getMaxMarketCap(stocks);
+      setMaxMarketCap(newMaxMarketCap);
+      
+      // We'll reuse visible stocks when updating to maintain state
+      setVisibleStocks(stocks);
+      
+      // Update nodes with new stock data or add new nodes
+      updateSimulationNodes(stocks, newMaxMarketCap);
     }
   }, [stocks]);
 
-  // Main effect to process incoming stock data
-  useEffect(() => {
-    // Only mark data as pending if we're getting new actual data
-    if (stocks.length > 0) {
-      dataUpdatePendingRef.current = true;
-    }
+  const updateSimulationNodes = (newStocks: Stock[], newMaxMarketCap: number) => {
+    if (!simulationRef.current) return;
     
-    const stocksToUse = stocks.length > 0 ? stocks : previousStocksRef.current;
+    // Get current simulation nodes
+    const currentNodes = simulationRef.current.nodes();
+    const existingNodeMap = new Map<string, NodeDatum>();
     
-    // Handle the case with no data at all
-    if (stocksToUse.length === 0) {
-      if (isFirstRenderRef.current) {
-        setNodes([]);
-        isFirstRenderRef.current = false;
-      }
-      return;
-    }
-
-    // Create updated nodes while preserving positions of existing ones
-    const updatedNodes = stocksToUse.map((stock, index) => {
-      const r = getBubbleSize(stock.marketCap, maxMarketCap) / 2;
-      const existingNode = previousNodesRef.current.get(stock.id);
+    // Map current nodes by ID for quick lookup
+    currentNodes.forEach(node => {
+      existingNodeMap.set(node.id, node);
+    });
+    
+    // Create updated nodes list, preserving positions for existing nodes
+    const updatedNodes: NodeDatum[] = newStocks.map((stock, index) => {
+      const radius = getBubbleSize(stock.marketCap, newMaxMarketCap) / 2;
+      const existing = existingNodeMap.get(stock.id);
       
-      if (existingNode && existingNode.x !== undefined && existingNode.y !== undefined) {
+      if (existing) {
+        // Update existing node but keep its position
         return {
-          ...existingNode,
+          ...existing,
           stock,
-          r,
+          r: radius,
           index
         };
       }
       
-      // For new nodes, place them near the center with a small random offset
+      // Create new node near the center with small random offset for natural appearance
       return {
         id: stock.id,
         index,
-        r,
+        r: radius,
         stock,
         x: containerDimensions.width / 2 + (Math.random() - 0.5) * 20,
         y: containerDimensions.height / 2 + (Math.random() - 0.5) * 20
       };
     });
     
-    if (!initialLayoutComplete) {
-      runSimulation(updatedNodes);
-    } else {
-      // Only update nodes if we have actual nodes to display
-      if (updatedNodes.length > 0) {
-        setNodes(updatedNodes);
-      }
-    }
+    // Save reference to current nodes
+    nodesRef.current = updatedNodes;
     
-    isFirstRenderRef.current = false;
-  }, [stocks, maxMarketCap, containerDimensions, initialLayoutComplete]);
-
-  const runSimulation = (nodesToSimulate: NodeDatum[]) => {
-    // Only run simulation if we have nodes
-    if (nodesToSimulate.length === 0) return;
+    // Stop current simulation temporally
+    simulationRef.current.stop();
     
-    const simulation = d3.forceSimulation<NodeDatum>()
-      .nodes(nodesToSimulate)
-      .alpha(0.9)
-      .alphaDecay(0.03)
-      .velocityDecay(0.4)
-      .force('center', d3.forceCenter(containerDimensions.width / 2, containerDimensions.height / 2))
-      .force('charge', d3.forceManyBody().strength(-20))
-      .force('collide', d3.forceCollide<NodeDatum>()
-        .radius(d => d.r + 15)
-        .strength(1)
-        .iterations(5))
-      .force('x', d3.forceX(containerDimensions.width / 2).strength(0.07))
-      .force('y', d3.forceY(containerDimensions.height / 2).strength(0.07));
-
-    simulation.on('tick', () => {
-      simulation.nodes().forEach(node => {
-        const padding = 10;
-        node.x = Math.max(node.r + padding, Math.min(containerDimensions.width - node.r - padding, node.x || 0));
-        node.y = Math.max(node.r + padding, Math.min(containerDimensions.height - node.r - padding, node.y || 0));
-      });
-      
-      setNodes([...simulation.nodes()]);
-    });
-
-    simulationRef.current = simulation;
+    // Update with new nodes
+    simulationRef.current.nodes(updatedNodes);
     
-    const timer = setTimeout(() => {
-      if (simulationRef.current) {
-        simulationRef.current.stop();
-        console.log("info: Simulation stopped permanently - positions fixed");
-        setInitialLayoutComplete(true);
-      }
-    }, 2000);
+    // Restart with a small alpha to adjust positions gently
+    simulationRef.current
+      .alpha(hasInitializedRef.current ? 0.5 : 0.8)
+      .restart();
     
-    return () => {
-      clearTimeout(timer);
-      if (simulationRef.current) {
-        simulationRef.current.stop();
-      }
-    };
+    hasInitializedRef.current = true;
   };
 
-  // Determine whether to show the no stocks message
-  // Only show if there's no data at all (current or previous)
-  const showNoStocksMessage = displayNodes.length === 0 && previousStocksRef.current.length === 0;
+  // Determine if we should show "No stocks" message
+  const showNoStocksMessage = visibleStocks.length === 0;
 
   return (
     <div 
@@ -196,17 +181,24 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       ) : (
         <>
           <div className="absolute inset-0 rounded-lg opacity-10 bg-gradient-to-br from-background to-primary/10" />
-          {displayNodes.map((node) => (
-            <StockBubble
-              key={`${node.id}-${node.stock.price}`} // Using price as part of key to ensure proper updates
-              stock={node.stock}
-              maxMarketCap={maxMarketCap}
-              onClick={onStockClick}
-              index={node.index}
-              allStocks={stocks.length > 0 ? stocks : previousStocksRef.current}
-              position={{ x: node.x || 0, y: node.y || 0 }}
-            />
-          ))}
+          {visibleStocks.map((stock, index) => {
+            const position = nodePositions.get(stock.id);
+            
+            // Only render bubbles that have a position calculated
+            if (!position) return null;
+            
+            return (
+              <StockBubble
+                key={stock.id}
+                stock={stock}
+                maxMarketCap={maxMarketCap}
+                onClick={onStockClick}
+                index={index}
+                allStocks={visibleStocks}
+                position={position}
+              />
+            );
+          })}
         </>
       )}
     </div>
