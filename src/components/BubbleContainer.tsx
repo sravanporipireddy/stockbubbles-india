@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/visualUtils';
@@ -51,6 +52,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Store previous nodes for reference
   useEffect(() => {
     if (nodes.length > 0) {
       const nodeMap = new Map<string, NodeDatum>();
@@ -61,29 +63,31 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     }
   }, [nodes]);
 
+  // Critical effect to ensure displayNodes are updated properly
   useEffect(() => {
-    if (nodes.length > 0 || dataUpdatePendingRef.current) {
-      setDisplayNodes(prevDisplayNodes => {
-        return nodes.length > 0 ? nodes : prevDisplayNodes;
-      });
-      
-      if (nodes.length > 0) {
-        dataUpdatePendingRef.current = false;
-      }
+    if (nodes.length > 0) {
+      setDisplayNodes(nodes);
+      dataUpdatePendingRef.current = false;
     }
   }, [nodes]);
 
+  // Store previous stocks for reference
   useEffect(() => {
     if (stocks.length > 0) {
       previousStocksRef.current = stocks;
     }
   }, [stocks]);
 
+  // Main effect to process incoming stock data
   useEffect(() => {
-    dataUpdatePendingRef.current = true;
+    // Only mark data as pending if we're getting new actual data
+    if (stocks.length > 0) {
+      dataUpdatePendingRef.current = true;
+    }
     
     const stocksToUse = stocks.length > 0 ? stocks : previousStocksRef.current;
     
+    // Handle the case with no data at all
     if (stocksToUse.length === 0) {
       if (isFirstRenderRef.current) {
         setNodes([]);
@@ -92,6 +96,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       return;
     }
 
+    // Create updated nodes while preserving positions of existing ones
     const updatedNodes = stocksToUse.map((stock, index) => {
       const r = getBubbleSize(stock.marketCap, maxMarketCap) / 2;
       const existingNode = previousNodesRef.current.get(stock.id);
@@ -105,6 +110,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         };
       }
       
+      // For new nodes, place them near the center with a small random offset
       return {
         id: stock.id,
         index,
@@ -118,13 +124,19 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     if (!initialLayoutComplete) {
       runSimulation(updatedNodes);
     } else {
-      setNodes(updatedNodes);
+      // Only update nodes if we have actual nodes to display
+      if (updatedNodes.length > 0) {
+        setNodes(updatedNodes);
+      }
     }
     
     isFirstRenderRef.current = false;
   }, [stocks, maxMarketCap, containerDimensions, initialLayoutComplete]);
 
   const runSimulation = (nodesToSimulate: NodeDatum[]) => {
+    // Only run simulation if we have nodes
+    if (nodesToSimulate.length === 0) return;
+    
     const simulation = d3.forceSimulation<NodeDatum>()
       .nodes(nodesToSimulate)
       .alpha(0.9)
@@ -167,7 +179,9 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     };
   };
 
-  const showNoStocksMessage = stocks.length === 0 && displayNodes.length === 0 && previousStocksRef.current.length === 0;
+  // Determine whether to show the no stocks message
+  // Only show if there's no data at all (current or previous)
+  const showNoStocksMessage = displayNodes.length === 0 && previousStocksRef.current.length === 0;
 
   return (
     <div 
@@ -184,7 +198,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
           <div className="absolute inset-0 rounded-lg opacity-10 bg-gradient-to-br from-background to-primary/10" />
           {displayNodes.map((node) => (
             <StockBubble
-              key={node.id}
+              key={`${node.id}-${node.stock.price}`} // Using price as part of key to ensure proper updates
               stock={node.stock}
               maxMarketCap={maxMarketCap}
               onClick={onStockClick}
