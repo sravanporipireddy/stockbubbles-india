@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/visualUtils';
@@ -27,6 +26,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const containerRef = useRef<HTMLDivElement>(null);
   const [initialLayoutComplete, setInitialLayoutComplete] = useState(false);
   const previousNodesRef = useRef<Map<string, NodeDatum>>(new Map());
+  const dataUpdatePendingRef = useRef(false);
   
   const [containerDimensions, setContainerDimensions] = useState({
     width: Math.min(window.innerWidth * 0.9, 1200),
@@ -63,18 +63,31 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
 
   // Update display nodes when actual nodes change
   useEffect(() => {
-    if (nodes.length > 0) {
-      setDisplayNodes(nodes);
+    if (nodes.length > 0 || dataUpdatePendingRef.current) {
+      setDisplayNodes(prevDisplayNodes => {
+        // Only update display nodes if we have new nodes to show
+        // Otherwise keep showing previous nodes during transition
+        return nodes.length > 0 ? nodes : prevDisplayNodes;
+      });
+      
+      if (nodes.length > 0) {
+        dataUpdatePendingRef.current = false;
+      }
     }
   }, [nodes]);
 
   // Update nodes when stocks change
   useEffect(() => {
-    // Skip if no stocks
+    // If we get a new set of stocks, mark that we're waiting for them
+    if (stocks.length > 0) {
+      dataUpdatePendingRef.current = true;
+    }
+    
+    // Skip if no stocks, but maintain current display
     if (stocks.length === 0) {
-      // Don't set nodes to empty array immediately
-      // Only update if we didn't have any nodes before
-      if (nodes.length === 0) {
+      // Only clear nodes if we didn't have any nodes before
+      // and we're not in the middle of a data refresh
+      if (nodes.length === 0 && displayNodes.length === 0) {
         setNodes([]);
       }
       return;
@@ -165,12 +178,15 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     };
   };
 
+  // Calculate if we should show the "no stocks" message - only when both actual and display nodes are empty
+  const showNoStocksMessage = stocks.length === 0 && displayNodes.length === 0;
+
   return (
     <div 
       ref={containerRef}
       className="relative h-[800px] max-w-6xl mx-auto z-30 mt-12 mb-16 border-transparent bubble-container"
     >
-      {stocks.length === 0 && displayNodes.length === 0 ? (
+      {showNoStocksMessage ? (
         <div className="text-center py-8">
           <h3 className="text-lg font-medium">No stocks found</h3>
           <p className="text-muted-foreground">Try adjusting your filters</p>
