@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
 import { Stock } from '@/lib/mockData';
 import BubbleContent from './BubbleContent';
 import { 
