@@ -40,7 +40,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
         left: 0,
         top: 0,
         transform: `translate(${position.x - bubbleSize/2}px, ${position.y - bubbleSize/2}px)`,
-        transition: 'box-shadow 0.2s ease'
+        // Remove all transition animations to prevent flicker
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}

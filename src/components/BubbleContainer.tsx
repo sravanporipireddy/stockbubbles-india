@@ -19,7 +19,8 @@ interface NodeDatum extends d3.SimulationNodeDatum {
 }
 
 const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick }) => {
-  const maxMarketCap = getMaxMarketCap(stocks);
+  const previousStocksRef = useRef<Stock[]>([]);
+  const maxMarketCap = getMaxMarketCap(stocks.length > 0 ? stocks : previousStocksRef.current);
   const [nodes, setNodes] = useState<NodeDatum[]>([]);
   const [displayNodes, setDisplayNodes] = useState<NodeDatum[]>([]);
   const simulationRef = useRef<d3.Simulation<NodeDatum, undefined> | null>(null);
@@ -27,13 +28,13 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const [initialLayoutComplete, setInitialLayoutComplete] = useState(false);
   const previousNodesRef = useRef<Map<string, NodeDatum>>(new Map());
   const dataUpdatePendingRef = useRef(false);
+  const isFirstRenderRef = useRef(true);
   
   const [containerDimensions, setContainerDimensions] = useState({
     width: Math.min(window.innerWidth * 0.9, 1200),
     height: 800
   });
   
-  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current) {
@@ -50,7 +51,6 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Save previous node positions when nodes are updated
   useEffect(() => {
     if (nodes.length > 0) {
       const nodeMap = new Map<string, NodeDatum>();
@@ -61,12 +61,9 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     }
   }, [nodes]);
 
-  // Update display nodes when actual nodes change
   useEffect(() => {
     if (nodes.length > 0 || dataUpdatePendingRef.current) {
       setDisplayNodes(prevDisplayNodes => {
-        // Only update display nodes if we have new nodes to show
-        // Otherwise keep showing previous nodes during transition
         return nodes.length > 0 ? nodes : prevDisplayNodes;
       });
       
@@ -76,29 +73,29 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     }
   }, [nodes]);
 
-  // Update nodes when stocks change
   useEffect(() => {
-    // If we get a new set of stocks, mark that we're waiting for them
     if (stocks.length > 0) {
-      dataUpdatePendingRef.current = true;
+      previousStocksRef.current = stocks;
     }
+  }, [stocks]);
+
+  useEffect(() => {
+    dataUpdatePendingRef.current = true;
     
-    // Skip if no stocks, but maintain current display
-    if (stocks.length === 0) {
-      // Only clear nodes if we didn't have any nodes before
-      // and we're not in the middle of a data refresh
-      if (nodes.length === 0 && displayNodes.length === 0) {
+    const stocksToUse = stocks.length > 0 ? stocks : previousStocksRef.current;
+    
+    if (stocksToUse.length === 0) {
+      if (isFirstRenderRef.current) {
         setNodes([]);
+        isFirstRenderRef.current = false;
       }
       return;
     }
 
-    // Always maintain existing positions for stocks that stay the same
-    const updatedNodes = stocks.map((stock, index) => {
+    const updatedNodes = stocksToUse.map((stock, index) => {
       const r = getBubbleSize(stock.marketCap, maxMarketCap) / 2;
       const existingNode = previousNodesRef.current.get(stock.id);
       
-      // If this stock existed before, maintain its position
       if (existingNode && existingNode.x !== undefined && existingNode.y !== undefined) {
         return {
           ...existingNode,
@@ -108,7 +105,6 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         };
       }
       
-      // For new stocks, place them at the center with minimal randomness
       return {
         id: stock.id,
         index,
@@ -119,37 +115,32 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       };
     });
     
-    // If we don't have positions yet or simulation isn't complete
     if (!initialLayoutComplete) {
       runSimulation(updatedNodes);
     } else {
       setNodes(updatedNodes);
     }
+    
+    isFirstRenderRef.current = false;
   }, [stocks, maxMarketCap, containerDimensions, initialLayoutComplete]);
 
-  // Run the D3 simulation to compute bubble positions
   const runSimulation = (nodesToSimulate: NodeDatum[]) => {
-    // Use a stronger collision force to ensure bubbles don't overlap
     const simulation = d3.forceSimulation<NodeDatum>()
       .nodes(nodesToSimulate)
-      .alpha(0.9) // Higher alpha for more energy
-      .alphaDecay(0.03) // Slower decay for better placement
-      .velocityDecay(0.4) // Add some friction
+      .alpha(0.9)
+      .alphaDecay(0.03)
+      .velocityDecay(0.4)
       .force('center', d3.forceCenter(containerDimensions.width / 2, containerDimensions.height / 2))
       .force('charge', d3.forceManyBody().strength(-20))
-      // Stronger collision detection with higher padding
       .force('collide', d3.forceCollide<NodeDatum>()
-        .radius(d => d.r + 15) // Add extra padding
-        .strength(1) // Maximum strength
-        .iterations(5)) // More iterations for better accuracy
+        .radius(d => d.r + 15)
+        .strength(1)
+        .iterations(5))
       .force('x', d3.forceX(containerDimensions.width / 2).strength(0.07))
       .force('y', d3.forceY(containerDimensions.height / 2).strength(0.07));
 
-    // Update nodes on each tick without animations
     simulation.on('tick', () => {
-      // Ensure nodes stay within container bounds with extra padding for collision
       simulation.nodes().forEach(node => {
-        // Padding to keep bubbles from touching the edge
         const padding = 10;
         node.x = Math.max(node.r + padding, Math.min(containerDimensions.width - node.r - padding, node.x || 0));
         node.y = Math.max(node.r + padding, Math.min(containerDimensions.height - node.r - padding, node.y || 0));
@@ -158,10 +149,8 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       setNodes([...simulation.nodes()]);
     });
 
-    // Store simulation reference
     simulationRef.current = simulation;
     
-    // Stop simulation after a short time to finalize positions
     const timer = setTimeout(() => {
       if (simulationRef.current) {
         simulationRef.current.stop();
@@ -178,8 +167,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     };
   };
 
-  // Calculate if we should show the "no stocks" message - only when both actual and display nodes are empty
-  const showNoStocksMessage = stocks.length === 0 && displayNodes.length === 0;
+  const showNoStocksMessage = stocks.length === 0 && displayNodes.length === 0 && previousStocksRef.current.length === 0;
 
   return (
     <div 
@@ -201,7 +189,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
               maxMarketCap={maxMarketCap}
               onClick={onStockClick}
               index={node.index}
-              allStocks={stocks}
+              allStocks={stocks.length > 0 ? stocks : previousStocksRef.current}
               position={{ x: node.x || 0, y: node.y || 0 }}
             />
           ))}
