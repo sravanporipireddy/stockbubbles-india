@@ -33,5 +33,6 @@ export const getTextColor = (changePercent: number): string => {
 
 // Function to determine the max market cap in the stock list
 export const getMaxMarketCap = (stocks: any[]): number => {
+  if (!stocks || stocks.length === 0) return 1000000000; // Default if no stocks
   return Math.max(...stocks.map(stock => stock.marketCap));
 };

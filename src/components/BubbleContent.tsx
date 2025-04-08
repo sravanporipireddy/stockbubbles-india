@@ -9,6 +9,8 @@ interface BubbleContentProps {
 }
 
 const BubbleContent: React.FC<BubbleContentProps> = ({ stock }) => {
+  if (!stock) return null;
+  
   const isPositive = stock.changePercent > 0;
   
   return (
