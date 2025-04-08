@@ -11,5 +11,6 @@ export * from './apiUtils';
 declare module '@/lib/mockData' {
   interface Stock {
     isPlaceholder?: boolean;
+    previousPrice: number;  // Make sure this is explicitly defined
   }
 }

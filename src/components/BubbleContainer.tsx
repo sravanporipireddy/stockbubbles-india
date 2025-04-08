@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/visualUtils';
@@ -23,6 +24,7 @@ const createPlaceholderStock = (id: string): Stock => ({
   symbol: '',
   name: '',
   price: 0,
+  previousPrice: 0, // Added missing property
   change: 0,
   changePercent: 0,
   marketCap: Math.random() * 1000000000,
