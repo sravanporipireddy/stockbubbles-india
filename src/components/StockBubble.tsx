@@ -39,10 +39,10 @@ const StockBubble: React.FC<StockBubbleProps> = ({
         height: bubbleSize,
         zIndex: isHovering ? 100 : 50,
         position: 'absolute',
-        left: 0,
-        top: 0,
-        transform: `translate(${position.x - bubbleSize/2}px, ${position.y - bubbleSize/2}px)`,
-        transition: 'none'
+        left: `${position.x - bubbleSize/2}px`,
+        top: `${position.y - bubbleSize/2}px`,
+        transform: 'none', // Remove transform to avoid rendering issues
+        transition: 'left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease'
       }}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}

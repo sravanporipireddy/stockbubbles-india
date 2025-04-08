@@ -28,7 +28,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const [maxMarketCap, setMaxMarketCap] = useState(0);
   
   const [containerDimensions, setContainerDimensions] = useState({
-    width: Math.min(window.innerWidth * 0.9, 1200),
+    width: 1000,
     height: 800
   });
   
@@ -38,20 +38,22 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       if (containerRef.current) {
         const { width } = containerRef.current.getBoundingClientRect();
         setContainerDimensions({
-          width,
+          width: width || 1000,
           height: 800
         });
       }
     };
     
     window.addEventListener('resize', handleResize);
-    handleResize();
+    // Initial measurement
+    setTimeout(handleResize, 0);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Keep a persistent simulation that can be updated
+  // Initialize simulation
   useEffect(() => {
     if (!simulationRef.current && containerDimensions.width > 0) {
+      console.log("Initializing simulation with dimensions:", containerDimensions);
       simulationRef.current = d3.forceSimulation<NodeDatum>()
         .alpha(0.8)
         .alphaDecay(0.03)
@@ -94,6 +96,8 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
 
   // Update data without fully replacing the bubbles
   useEffect(() => {
+    console.log("Stock data changed, count:", stocks.length);
+    
     // Only proceed if we have stocks or already have visible stocks
     if (stocks.length === 0 && visibleStocks.length === 0) return;
     
@@ -111,7 +115,12 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   }, [stocks]);
 
   const updateSimulationNodes = (newStocks: Stock[], newMaxMarketCap: number) => {
-    if (!simulationRef.current) return;
+    if (!simulationRef.current) {
+      console.error("Cannot update simulation: simulation not initialized");
+      return;
+    }
+    
+    console.log("Updating simulation nodes, count:", newStocks.length);
     
     // Get current simulation nodes
     const currentNodes = simulationRef.current.nodes();
@@ -163,6 +172,20 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       .restart();
     
     hasInitializedRef.current = true;
+    
+    // Force an initial tick to get starting positions
+    for (let i = 0; i < 10; i++) {
+      simulationRef.current.tick();
+    }
+    
+    // Update positions map immediately with initial positions
+    const initialPositions = new Map<string, {x: number, y: number}>();
+    updatedNodes.forEach(node => {
+      if (node.x !== undefined && node.y !== undefined) {
+        initialPositions.set(node.id, {x: node.x, y: node.y});
+      }
+    });
+    setNodePositions(initialPositions);
   };
 
   // Determine if we should show "No stocks" message
@@ -172,6 +195,9 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     <div 
       ref={containerRef}
       className="relative h-[800px] max-w-6xl mx-auto z-30 mt-12 mb-16 border-transparent bubble-container"
+      style={{
+        border: '1px solid rgba(0,0,0,0.1)', // Add border to help debug container dimensions
+      }}
     >
       {showNoStocksMessage ? (
         <div className="text-center py-8">
@@ -181,11 +207,19 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       ) : (
         <>
           <div className="absolute inset-0 rounded-lg opacity-10 bg-gradient-to-br from-background to-primary/10" />
+          <div className="debug-info absolute top-2 left-2 text-xs text-gray-400">
+            Dimensions: {containerDimensions.width}x{containerDimensions.height} | 
+            Stocks: {visibleStocks.length} | 
+            Positions: {nodePositions.size}
+          </div>
           {visibleStocks.map((stock, index) => {
             const position = nodePositions.get(stock.id);
             
             // Only render bubbles that have a position calculated
-            if (!position) return null;
+            if (!position) {
+              console.log(`No position for stock ${stock.id}`);
+              return null;
+            }
             
             return (
               <StockBubble
