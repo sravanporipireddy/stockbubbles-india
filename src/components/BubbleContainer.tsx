@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/visualUtils';
@@ -41,36 +40,49 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const [maxMarketCap, setMaxMarketCap] = useState(1000000000);
   const [displayNodes, setDisplayNodes] = useState<{ id: string, stock: Stock | null, position: { x: number, y: number } }[]>([]);
   
-  // Increase bubble count to fill the screen better
-  const BUBBLE_COUNT = 80;
+  const BUBBLE_COUNT = 100;
   
   const [containerDimensions, setContainerDimensions] = useState({
-    width: window.innerWidth,
-    height: window.innerHeight
+    width: 0,
+    height: 0
   });
   
   useEffect(() => {
-    const handleResize = () => {
-      setContainerDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight
-      });
+    const updateContainerSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerDimensions({
+          width: rect.width,
+          height: rect.height
+        });
+      }
     };
     
-    window.addEventListener('resize', handleResize);
-    setTimeout(handleResize, 100);
-    return () => window.removeEventListener('resize', handleResize);
+    updateContainerSize();
+    const resizeObserver = new ResizeObserver(updateContainerSize);
+    
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    
+    window.addEventListener('resize', updateContainerSize);
+    
+    return () => {
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+      window.removeEventListener('resize', updateContainerSize);
+    };
   }, []);
 
   useEffect(() => {
-    if (!simulationRef.current && containerDimensions.width > 0) {
+    if (!simulationRef.current && containerDimensions.width > 0 && containerDimensions.height > 0) {
       console.log("Initializing simulation with dimensions:", containerDimensions);
       
-      // Create bubbles that will distribute across the entire screen
       const initialNodes: NodeDatum[] = Array.from({ length: BUBBLE_COUNT }).map((_, index) => {
         const id = `placeholder-${index}`;
         const stock = createPlaceholderStock(id);
-        const size = 20 + Math.random() * 60;
+        const size = 20 + Math.random() * 70;
         
         return {
           id,
@@ -86,17 +98,21 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       
       simulationRef.current = d3.forceSimulation<NodeDatum>(initialNodes)
         .alpha(0.8)
-        .alphaDecay(0.03)
-        .velocityDecay(0.4)
-        // Remove center force to allow bubbles to fill the entire screen
-        .force('charge', d3.forceManyBody().strength(-20))
+        .alphaDecay(0.02)
+        .velocityDecay(0.3)
+        .force('charge', d3.forceManyBody().strength(-30))
         .force('collide', d3.forceCollide<NodeDatum>()
-          .radius(d => d.r + 10)
-          .strength(0.9)
-          .iterations(3))
-        // Use weaker x and y forces that allow spreading across the screen
-        .force('x', d3.forceX(containerDimensions.width / 2).strength(0.02))
-        .force('y', d3.forceY(containerDimensions.height / 2).strength(0.02));
+          .radius(d => d.r + 5)
+          .strength(0.8)
+          .iterations(4))
+        .force('x', d3.forceX(containerDimensions.width / 2).strength(0.03))
+        .force('y', d3.forceY(containerDimensions.height / 2).strength(0.03))
+        .force('boundaryX', d3.forceX().x(d => {
+          return Math.max(d.r || 0, Math.min(containerDimensions.width - (d.r || 0), d.x || 0));
+        }).strength(0.2))
+        .force('boundaryY', d3.forceY().y(d => {
+          return Math.max(d.r || 0, Math.min(containerDimensions.height - (d.r || 0), d.y || 0));
+        }).strength(0.2));
       
       simulationRef.current.on('tick', () => {
         const simulation = simulationRef.current;
@@ -106,8 +122,8 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         
         simulation.nodes().forEach(node => {
           const padding = node.r || 20;
-          node.x = Math.max(padding, Math.min(containerDimensions.width - padding, node.x || containerDimensions.width/2));
-          node.y = Math.max(padding, Math.min(containerDimensions.height - padding, node.y || containerDimensions.height/2));
+          node.x = Math.max(padding, Math.min(containerDimensions.width - padding, node.x || 0));
+          node.y = Math.max(padding, Math.min(containerDimensions.height - padding, node.y || 0));
           
           newPositions.set(node.id, {x: node.x, y: node.y});
         });
@@ -123,8 +139,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         setDisplayNodes(newDisplayNodes);
       });
       
-      // Run more initial simulation ticks to spread bubbles
-      for (let i = 0; i < 30; i++) {
+      for (let i = 0; i < 50; i++) {
         simulationRef.current.tick();
       }
     }
@@ -171,7 +186,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
           node.r = getBubbleSize(stock.marketCap, newMaxMarketCap) / 2;
         }
       } else if (placeholderIndex >= BUBBLE_COUNT - stocks.length) {
-        node.r = 15 + Math.random() * 30;
+        node.r = 15 + Math.random() * 35;
       }
       placeholderIndex++;
     });
@@ -197,14 +212,12 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   return (
     <div 
       ref={containerRef}
-      className="fixed inset-0 w-screen h-screen overflow-hidden z-30 bubble-container"
+      className="relative w-full h-[calc(100vh-320px)] min-h-[400px] overflow-hidden bubble-container"
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        background: 'transparent'
+        background: 'transparent',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '8px',
+        padding: '8px'
       }}
     >
       <div className="absolute inset-0 z-0" />

@@ -9,19 +9,20 @@ export const getBubbleColor = (changePercent: number): string => {
   return 'bg-gradient-to-br from-red-500 to-red-700 shadow-md shadow-red-600/20';
 };
 
-// Function to determine bubble size based on market cap with a wider size distribution
+// Function to determine bubble size based on market cap for better distribution
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
-  const minSize = 40; // Minimum bubble size
-  const maxSize = 120; // Maximum bubble size
+  const minSize = 45; // Increased minimum size
+  const maxSize = 110; // Maximum bubble size
   
-  // Apply square root scaling for better visual area representation (standard in D3 bubble charts)
-  const sizeRatio = Math.sqrt(marketCap / maxMarketCap);
+  // Apply logarithmic scaling for better distribution of sizes
+  const logMarketCap = Math.log(marketCap + 1);
+  const logMaxMarketCap = Math.log(maxMarketCap + 1);
+  const sizeRatio = logMarketCap / logMaxMarketCap;
   
-  // Add more variance based on market cap to create diverse sizes
-  const sizeSeed = (marketCap % 10000) / 10000;
-  const variance = sizeSeed * 25; // Increased variance
+  // Add some controlled randomness to create visual interest while maintaining relative sizes
+  const variance = (Math.random() * 0.2 + 0.9); // 0.9 to 1.1 multiplier
   
-  return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio + variance));
+  return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio * variance));
 };
 
 // Function to determine text color based on performance
