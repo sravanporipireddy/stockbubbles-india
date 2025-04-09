@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/visualUtils';
@@ -23,7 +24,7 @@ const createPlaceholderStock = (id: string): Stock => ({
   symbol: '',
   name: '',
   price: 0,
-  previousPrice: 0,
+  previousPrice: 0, // Added missing property
   change: 0,
   changePercent: 0,
   marketCap: Math.random() * 1000000000,
@@ -40,57 +41,45 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const [maxMarketCap, setMaxMarketCap] = useState(1000000000);
   const [displayNodes, setDisplayNodes] = useState<{ id: string, stock: Stock | null, position: { x: number, y: number } }[]>([]);
   
-  const BUBBLE_COUNT = 100;
+  const BUBBLE_COUNT = 50;
   
   const [containerDimensions, setContainerDimensions] = useState({
-    width: 0,
-    height: 0
+    width: 1000,
+    height: 800
   });
   
   useEffect(() => {
-    const updateContainerSize = () => {
+    const handleResize = () => {
       if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect();
+        const { width } = containerRef.current.getBoundingClientRect();
         setContainerDimensions({
-          width: rect.width,
-          height: rect.height
+          width: width || 1000,
+          height: 800
         });
       }
     };
     
-    updateContainerSize();
-    const resizeObserver = new ResizeObserver(updateContainerSize);
-    
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
-    }
-    
-    window.addEventListener('resize', updateContainerSize);
-    
-    return () => {
-      if (containerRef.current) {
-        resizeObserver.unobserve(containerRef.current);
-      }
-      window.removeEventListener('resize', updateContainerSize);
-    };
+    window.addEventListener('resize', handleResize);
+    setTimeout(handleResize, 100);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
-    if (!simulationRef.current && containerDimensions.width > 0 && containerDimensions.height > 0) {
+    if (!simulationRef.current && containerDimensions.width > 0) {
       console.log("Initializing simulation with dimensions:", containerDimensions);
       
       const initialNodes: NodeDatum[] = Array.from({ length: BUBBLE_COUNT }).map((_, index) => {
         const id = `placeholder-${index}`;
         const stock = createPlaceholderStock(id);
-        const size = 20 + Math.random() * 70;
+        const size = 20 + Math.random() * 60;
         
         return {
           id,
           index,
           r: size / 2,
           stock: stock,
-          x: Math.random() * containerDimensions.width,
-          y: Math.random() * containerDimensions.height
+          x: containerDimensions.width * 0.5 + (Math.random() - 0.5) * containerDimensions.width * 0.8,
+          y: containerDimensions.height * 0.5 + (Math.random() - 0.5) * containerDimensions.height * 0.8
         };
       });
       
@@ -98,21 +87,16 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       
       simulationRef.current = d3.forceSimulation<NodeDatum>(initialNodes)
         .alpha(0.8)
-        .alphaDecay(0.02)
-        .velocityDecay(0.3)
-        .force('charge', d3.forceManyBody().strength(-30))
+        .alphaDecay(0.03)
+        .velocityDecay(0.4)
+        .force('center', d3.forceCenter(containerDimensions.width / 2, containerDimensions.height / 2))
+        .force('charge', d3.forceManyBody().strength(-20))
         .force('collide', d3.forceCollide<NodeDatum>()
-          .radius(d => d.r + 5)
-          .strength(0.8)
-          .iterations(4))
-        .force('x', d3.forceX(containerDimensions.width / 2).strength(0.03))
-        .force('y', d3.forceY(containerDimensions.height / 2).strength(0.03))
-        .force('boundaryX', d3.forceX().x(d => {
-          return Math.max(d.r || 0, Math.min(containerDimensions.width - (d.r || 0), d.x || 0));
-        }).strength(0.2))
-        .force('boundaryY', d3.forceY().y(d => {
-          return Math.max(d.r || 0, Math.min(containerDimensions.height - (d.r || 0), d.y || 0));
-        }).strength(0.2));
+          .radius(d => d.r + 10)
+          .strength(0.9)
+          .iterations(3))
+        .force('x', d3.forceX(containerDimensions.width / 2).strength(0.07))
+        .force('y', d3.forceY(containerDimensions.height / 2).strength(0.07));
       
       simulationRef.current.on('tick', () => {
         const simulation = simulationRef.current;
@@ -122,8 +106,8 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         
         simulation.nodes().forEach(node => {
           const padding = node.r || 20;
-          node.x = Math.max(padding, Math.min(containerDimensions.width - padding, node.x || 0));
-          node.y = Math.max(padding, Math.min(containerDimensions.height - padding, node.y || 0));
+          node.x = Math.max(padding, Math.min(containerDimensions.width - padding, node.x || containerDimensions.width/2));
+          node.y = Math.max(padding, Math.min(containerDimensions.height - padding, node.y || containerDimensions.height/2));
           
           newPositions.set(node.id, {x: node.x, y: node.y});
         });
@@ -139,7 +123,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         setDisplayNodes(newDisplayNodes);
       });
       
-      for (let i = 0; i < 50; i++) {
+      for (let i = 0; i < 20; i++) {
         simulationRef.current.tick();
       }
     }
@@ -186,7 +170,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
           node.r = getBubbleSize(stock.marketCap, newMaxMarketCap) / 2;
         }
       } else if (placeholderIndex >= BUBBLE_COUNT - stocks.length) {
-        node.r = 15 + Math.random() * 35;
+        node.r = 15 + Math.random() * 30;
       }
       placeholderIndex++;
     });
@@ -212,16 +196,13 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   return (
     <div 
       ref={containerRef}
-      className="relative w-full h-[calc(100vh-320px)] min-h-[400px] overflow-hidden bubble-container"
+      className="relative h-[800px] max-w-6xl mx-auto z-30 mt-12 mb-16 border-transparent bubble-container"
       style={{
-        background: 'transparent',
-        border: '1px solid rgba(255,255,255,0.1)',
-        borderRadius: '8px',
-        padding: '8px'
+        border: '1px solid rgba(0,0,0,0.1)',
       }}
     >
-      <div className="absolute inset-0 z-0" />
-      <div className="debug-info absolute top-2 left-2 text-xs text-gray-400 z-50">
+      <div className="absolute inset-0 rounded-lg opacity-10 bg-gradient-to-br from-background to-primary/10" />
+      <div className="debug-info absolute top-2 left-2 text-xs text-gray-400">
         Dimensions: {containerDimensions.width}x{containerDimensions.height} | 
         Bubbles: {displayNodes.length} | 
         Real Stocks: {stocks.length}
