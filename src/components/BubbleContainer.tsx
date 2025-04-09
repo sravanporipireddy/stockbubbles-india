@@ -24,7 +24,7 @@ const createPlaceholderStock = (id: string): Stock => ({
   symbol: '',
   name: '',
   price: 0,
-  previousPrice: 0, // Added missing property
+  previousPrice: 0,
   change: 0,
   changePercent: 0,
   marketCap: Math.random() * 1000000000,
@@ -41,22 +41,20 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const [maxMarketCap, setMaxMarketCap] = useState(1000000000);
   const [displayNodes, setDisplayNodes] = useState<{ id: string, stock: Stock | null, position: { x: number, y: number } }[]>([]);
   
-  const BUBBLE_COUNT = 50;
+  // Increase bubble count to fill the screen better
+  const BUBBLE_COUNT = 80;
   
   const [containerDimensions, setContainerDimensions] = useState({
-    width: 1000,
-    height: 800
+    width: window.innerWidth,
+    height: window.innerHeight
   });
   
   useEffect(() => {
     const handleResize = () => {
-      if (containerRef.current) {
-        const { width } = containerRef.current.getBoundingClientRect();
-        setContainerDimensions({
-          width: width || 1000,
-          height: 800
-        });
-      }
+      setContainerDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
     };
     
     window.addEventListener('resize', handleResize);
@@ -68,6 +66,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     if (!simulationRef.current && containerDimensions.width > 0) {
       console.log("Initializing simulation with dimensions:", containerDimensions);
       
+      // Create bubbles that will distribute across the entire screen
       const initialNodes: NodeDatum[] = Array.from({ length: BUBBLE_COUNT }).map((_, index) => {
         const id = `placeholder-${index}`;
         const stock = createPlaceholderStock(id);
@@ -78,8 +77,8 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
           index,
           r: size / 2,
           stock: stock,
-          x: containerDimensions.width * 0.5 + (Math.random() - 0.5) * containerDimensions.width * 0.8,
-          y: containerDimensions.height * 0.5 + (Math.random() - 0.5) * containerDimensions.height * 0.8
+          x: Math.random() * containerDimensions.width,
+          y: Math.random() * containerDimensions.height
         };
       });
       
@@ -89,14 +88,15 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         .alpha(0.8)
         .alphaDecay(0.03)
         .velocityDecay(0.4)
-        .force('center', d3.forceCenter(containerDimensions.width / 2, containerDimensions.height / 2))
+        // Remove center force to allow bubbles to fill the entire screen
         .force('charge', d3.forceManyBody().strength(-20))
         .force('collide', d3.forceCollide<NodeDatum>()
           .radius(d => d.r + 10)
           .strength(0.9)
           .iterations(3))
-        .force('x', d3.forceX(containerDimensions.width / 2).strength(0.07))
-        .force('y', d3.forceY(containerDimensions.height / 2).strength(0.07));
+        // Use weaker x and y forces that allow spreading across the screen
+        .force('x', d3.forceX(containerDimensions.width / 2).strength(0.02))
+        .force('y', d3.forceY(containerDimensions.height / 2).strength(0.02));
       
       simulationRef.current.on('tick', () => {
         const simulation = simulationRef.current;
@@ -123,7 +123,8 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         setDisplayNodes(newDisplayNodes);
       });
       
-      for (let i = 0; i < 20; i++) {
+      // Run more initial simulation ticks to spread bubbles
+      for (let i = 0; i < 30; i++) {
         simulationRef.current.tick();
       }
     }
@@ -196,13 +197,18 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   return (
     <div 
       ref={containerRef}
-      className="relative h-[800px] max-w-6xl mx-auto z-30 mt-12 mb-16 border-transparent bubble-container"
+      className="fixed inset-0 w-screen h-screen overflow-hidden z-30 bubble-container"
       style={{
-        border: '1px solid rgba(0,0,0,0.1)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'transparent'
       }}
     >
-      <div className="absolute inset-0 rounded-lg opacity-10 bg-gradient-to-br from-background to-primary/10" />
-      <div className="debug-info absolute top-2 left-2 text-xs text-gray-400">
+      <div className="absolute inset-0 z-0" />
+      <div className="debug-info absolute top-2 left-2 text-xs text-gray-400 z-50">
         Dimensions: {containerDimensions.width}x{containerDimensions.height} | 
         Bubbles: {displayNodes.length} | 
         Real Stocks: {stocks.length}
