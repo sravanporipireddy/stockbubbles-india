@@ -11,8 +11,8 @@ export const getBubbleColor = (changePercent: number): string => {
 
 // Function to determine bubble size based on market cap for better distribution
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
-  const minSize = 45; // Increased minimum size
-  const maxSize = 110; // Maximum bubble size
+  const minSize = 55; // Increased minimum size for better readability
+  const maxSize = 120; // Maximum bubble size
   
   // Apply logarithmic scaling for better distribution of sizes
   const logMarketCap = Math.log(marketCap + 1);

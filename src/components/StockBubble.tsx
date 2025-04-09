@@ -31,7 +31,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
   
   // Calculate bubble size based on market cap
   const bubbleSize = isPlaceholder 
-    ? 35 + Math.random() * 45 // Slightly larger placeholder bubbles
+    ? 40 + Math.random() * 35 // Slightly larger placeholder bubbles
     : getBubbleSize(stock.marketCap, maxMarketCap);
     
   // For placeholder bubbles, use a more visible gradient
@@ -55,7 +55,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
         top: `${position.y - bubbleSize/2}px`,
         transform: 'none', 
         transition: 'left 0.5s ease, top 0.5s ease, width 0.5s ease, height 0.5s ease, opacity 0.3s ease',
-        opacity: isPlaceholder ? 0.9 : 1 // Increased opacity for better visibility
+        opacity: isPlaceholder ? 0.6 : 1 // Reduced opacity for placeholders to make real stocks stand out
       }}
       onMouseEnter={() => !isPlaceholder && setIsHovering(true)}
       onMouseLeave={() => !isPlaceholder && setIsHovering(false)}
@@ -70,7 +70,12 @@ const StockBubble: React.FC<StockBubbleProps> = ({
           transition: 'box-shadow 0.2s ease',
         }}
       >
-        {!isPlaceholder && <BubbleContent stock={stock} />}
+        {/* Always show content, but different styling for placeholders */}
+        {isPlaceholder ? (
+          <div className="w-full h-full rounded-full opacity-30"></div>
+        ) : (
+          <BubbleContent stock={stock} />
+        )}
       </div>
     </div>
   );
