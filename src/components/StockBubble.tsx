@@ -1,5 +1,6 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Stock } from '@/lib/mockData';
 import BubbleContent from './BubbleContent';
 import { 
@@ -8,8 +9,7 @@ import {
 } from '@/lib/visualUtils';
 
 interface StockBubbleProps {
-  stock: Stock | null;
-  isPlaceholder?: boolean;
+  stock: Stock;
   maxMarketCap: number;
   onClick: (stock: Stock) => void;
   index: number;
@@ -19,58 +19,43 @@ interface StockBubbleProps {
 
 const StockBubble: React.FC<StockBubbleProps> = ({ 
   stock, 
-  isPlaceholder = false,
   maxMarketCap, 
   onClick, 
+  index,
   position
 }) => {
   const [isHovering, setIsHovering] = useState(false);
-  const bubbleRef = useRef<HTMLDivElement>(null);
-  
-  if (!stock) return null;
   
   // Calculate bubble size based on market cap
-  const bubbleSize = isPlaceholder 
-    ? 30 + Math.random() * 50 // Random size for placeholders
-    : getBubbleSize(stock.marketCap, maxMarketCap);
-    
-  // For placeholder bubbles, use a neutral color
-  const bubbleColor = isPlaceholder 
-    ? 'bg-gradient-to-br from-gray-300 to-gray-400 opacity-30'
-    : getBubbleColor(stock.changePercent);
-  
-  // Don't attach onClick handler to placeholder bubbles
-  const handleClick = isPlaceholder ? undefined : () => onClick(stock);
+  const bubbleSize = getBubbleSize(stock.marketCap, maxMarketCap);
+  const bubbleColor = getBubbleColor(stock.changePercent);
   
   return (
     <div
-      ref={bubbleRef}
-      className={`absolute cursor-pointer stock-bubble ${isPlaceholder ? 'pointer-events-none' : ''}`}
+      className="absolute cursor-pointer stock-bubble"
       style={{ 
         width: bubbleSize, 
         height: bubbleSize,
-        zIndex: isPlaceholder ? 10 : (isHovering ? 100 : 50),
+        zIndex: isHovering ? 100 : 50,
         position: 'absolute',
-        left: `${position.x - bubbleSize/2}px`,
-        top: `${position.y - bubbleSize/2}px`,
-        transform: 'none', // Remove transform to avoid rendering issues
-        transition: 'left 0.5s ease, top 0.5s ease, width 0.5s ease, height 0.5s ease, opacity 0.3s ease',
-        opacity: isPlaceholder ? 0.6 : 1
+        left: 0,
+        top: 0,
+        transform: `translate(${position.x - bubbleSize/2}px, ${position.y - bubbleSize/2}px)`,
+        transition: 'box-shadow 0.2s ease'
       }}
-      onMouseEnter={() => !isPlaceholder && setIsHovering(true)}
-      onMouseLeave={() => !isPlaceholder && setIsHovering(false)}
-      onClick={handleClick}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
+      onClick={() => onClick(stock)}
     >
       <div 
         className={`absolute inset-0 rounded-full flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-2 shadow-lg`}
         style={{
-          boxShadow: isPlaceholder ? 'none' : (isHovering 
+          boxShadow: isHovering 
             ? '0 0 0 3px rgba(255,255,255,0.6), 0 8px 25px rgba(0,0,0,0.3)' 
-            : '0 4px 10px rgba(0,0,0,0.15)'),
-          transition: 'box-shadow 0.2s ease',
+            : '0 4px 10px rgba(0,0,0,0.15)'
         }}
       >
-        {!isPlaceholder && <BubbleContent stock={stock} />}
+        <BubbleContent stock={stock} />
       </div>
     </div>
   );

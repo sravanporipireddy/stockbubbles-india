@@ -3,18 +3,22 @@ import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import { Stock } from '@/lib/mockData';
 import { formatPrice, formatPercentage } from '@/lib/formatUtils';
+import { motion } from 'framer-motion';
 
 interface BubbleContentProps {
   stock: Stock;
 }
 
 const BubbleContent: React.FC<BubbleContentProps> = ({ stock }) => {
-  if (!stock) return null;
-  
   const isPositive = stock.changePercent > 0;
   
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full">
+    <motion.div 
+      className="flex flex-col items-center justify-center w-full h-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+    >
       <span className="font-bold text-white text-center px-1 text-xs sm:text-sm truncate w-full">
         {stock.symbol}
       </span>
@@ -31,7 +35,7 @@ const BubbleContent: React.FC<BubbleContentProps> = ({ stock }) => {
         )}
         <span>{formatPercentage(stock.changePercent)}</span>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
