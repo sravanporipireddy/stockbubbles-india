@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/visualUtils';
@@ -40,8 +41,8 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const [maxMarketCap, setMaxMarketCap] = useState(1000000000);
   const [displayNodes, setDisplayNodes] = useState<{ id: string, stock: Stock | null, position: { x: number, y: number } }[]>([]);
   
-  // Increase bubble count for better coverage
-  const BUBBLE_COUNT = 200;
+  // Increase bubble count for better coverage - MORE BUBBLES as requested
+  const BUBBLE_COUNT = 300;
   
   const [containerDimensions, setContainerDimensions] = useState({
     width: 0,
@@ -80,33 +81,41 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     if (!simulationRef.current && containerDimensions.width > 0 && containerDimensions.height > 0) {
       console.log("Initializing simulation with dimensions:", containerDimensions);
       
-      // Create nodes that cover the entire area
+      // Create nodes that cover the entire area with better distribution
       const initialNodes: NodeDatum[] = Array.from({ length: BUBBLE_COUNT }).map((_, index) => {
         const id = `placeholder-${index}`;
         const stock = createPlaceholderStock(id);
         
         // Randomize size with better distribution
-        const size = 10 + Math.random() * 50;
+        const size = 40 + Math.random() * 40;
         
-        // Distribute nodes evenly across container
-        const gridSize = Math.ceil(Math.sqrt(BUBBLE_COUNT));
-        const cellWidth = containerDimensions.width / gridSize;
-        const cellHeight = containerDimensions.height / gridSize;
+        // Use a more hexagonal packing approach for better distribution
+        // This creates a honeycomb-like pattern similar to the reference image
+        const cols = Math.ceil(Math.sqrt(BUBBLE_COUNT * containerDimensions.width / containerDimensions.height));
+        const rows = Math.ceil(BUBBLE_COUNT / cols);
         
-        const col = index % gridSize;
-        const row = Math.floor(index / gridSize);
+        const col = index % cols;
+        const row = Math.floor(index / cols);
         
-        // Add slight randomness to grid positions
-        const xOffset = (Math.random() - 0.5) * cellWidth * 0.8;
-        const yOffset = (Math.random() - 0.5) * cellHeight * 0.8;
+        // Stagger rows for a more hexagonal packing
+        const isEvenRow = row % 2 === 0;
+        const xOffset = isEvenRow ? 0 : containerDimensions.width / cols / 2;
+        
+        // Use pixel positions based on container size
+        const baseX = (containerDimensions.width / cols) * col + xOffset;
+        const baseY = (containerDimensions.height / rows) * row;
+        
+        // Add some randomness to positions to avoid a perfect grid
+        const randX = (Math.random() - 0.5) * containerDimensions.width / cols * 0.7;
+        const randY = (Math.random() - 0.5) * containerDimensions.height / rows * 0.7;
         
         return {
           id,
           index,
           r: size / 2,
           stock: stock,
-          x: (col + 0.5) * cellWidth + xOffset,
-          y: (row + 0.5) * cellHeight + yOffset
+          x: baseX + randX, 
+          y: baseY + randY
         };
       });
       
@@ -114,21 +123,15 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       
       simulationRef.current = d3.forceSimulation<NodeDatum>(initialNodes)
         .alpha(0.9)
-        .alphaDecay(0.01)  // Slower decay for better settling
-        .velocityDecay(0.2)  // Lower decay for more movement
+        .alphaDecay(0.008)  // Slower decay for better settling
+        .velocityDecay(0.25)  // Adjusted for more natural movement
         .force('charge', d3.forceManyBody().strength(-15))  // Reduced repulsion
         .force('collide', d3.forceCollide<NodeDatum>()
-          .radius(d => d.r + 2)  // Smaller padding between bubbles
+          .radius(d => d.r + 1)  // Minimal padding for tighter packing
           .strength(0.7)
-          .iterations(3))
-        .force('x', d3.forceX().x(d => {
-          // Spread nodes more evenly across x-axis
-          return Math.random() * containerDimensions.width;
-        }).strength(0.02))
-        .force('y', d3.forceY().y(d => {
-          // Spread nodes more evenly across y-axis
-          return Math.random() * containerDimensions.height;
-        }).strength(0.02))
+          .iterations(4))
+        .force('x', d3.forceX().x(d => Math.random() * containerDimensions.width).strength(0.02))
+        .force('y', d3.forceY().y(d => Math.random() * containerDimensions.height).strength(0.02))
         .force('boundaryX', d3.forceX().x(d => {
           return Math.max(d.r || 0, Math.min(containerDimensions.width - (d.r || 0), d.x || 0));
         }).strength(0.1))
@@ -161,7 +164,8 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         setDisplayNodes(newDisplayNodes);
       });
       
-      for (let i = 0; i < 50; i++) {
+      // Run more initial ticks to help position bubbles
+      for (let i = 0; i < 100; i++) {
         simulationRef.current.tick();
       }
     }
@@ -211,7 +215,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         }
       } else if (node.stock?.isPlaceholder) {
         // Resize remaining placeholder nodes for visual variety
-        node.r = (15 + Math.random() * 25) / 2;
+        node.r = (20 + Math.random() * 15) / 2;
       }
       placeholderIndex++;
     });
@@ -221,7 +225,8 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       .alpha(0.3)
       .restart();
     
-    for (let i = 0; i < 5; i++) {
+    // Run a few more ticks to help reposition
+    for (let i = 0; i < 10; i++) {
       simulationRef.current.tick();
     }
     
@@ -237,16 +242,16 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   return (
     <div 
       ref={containerRef}
-      className="relative w-full h-[calc(100vh-320px)] min-h-[400px] overflow-hidden bubble-container"
+      className="relative w-full h-[calc(100vh-320px)] min-h-[400px] overflow-hidden bubble-container bg-[#121212]"
       style={{
-        background: 'transparent',
+        background: '#121212', // Dark background like the reference image
         border: '1px solid rgba(255,255,255,0.1)',
         borderRadius: '8px',
-        padding: '8px'
+        padding: '4px'
       }}
     >
       <div className="absolute inset-0 z-0" />
-      <div className="debug-info absolute top-2 left-2 text-xs text-gray-400 z-50">
+      <div className="debug-info absolute top-2 left-2 text-xs text-gray-400 z-50 opacity-50">
         Dimensions: {containerDimensions.width}x{containerDimensions.height} | 
         Bubbles: {displayNodes.length} | 
         Real Stocks: {stocks.length}
