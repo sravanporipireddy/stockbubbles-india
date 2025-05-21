@@ -14,17 +14,17 @@ export const getBubbleColor = (changePercent: number): string => {
 
 // Function to determine bubble size based on market cap for better distribution
 export const getBubbleSize = (marketCap: number, maxMarketCap: number): number => {
-  // Adjust size range to be closer to the reference image
-  const minSize = 55; // Minimum bubble size for readability
-  const maxSize = 120; // Maximum bubble size for larger tokens
+  // Adjust size range to be closer to the reference image - reduced size range
+  const minSize = 40; // Minimum bubble size for readability (reduced)
+  const maxSize = 100; // Maximum bubble size for larger tokens (reduced)
   
   // Apply logarithmic scaling for better distribution of sizes
   const logMarketCap = Math.log(marketCap + 1);
   const logMaxMarketCap = Math.log(maxMarketCap + 1);
   const sizeRatio = logMarketCap / logMaxMarketCap;
   
-  // Slightly less variance for more consistent sizes
-  const variance = (Math.random() * 0.12 + 0.94); // 0.94 to 1.06 multiplier
+  // Less variance for more consistent sizes
+  const variance = (Math.random() * 0.08 + 0.96); // 0.96 to 1.04 multiplier (reduced variance)
   
   return Math.max(minSize, Math.min(maxSize, minSize + (maxSize - minSize) * sizeRatio * variance));
 };
@@ -42,14 +42,14 @@ export const getMaxMarketCap = (stocks: any[]): number => {
   return Math.max(...stocks.map(stock => stock.marketCap));
 };
 
-// Get bubble glow based on performance (NEW)
+// Get bubble glow based on performance
 export const getBubbleGlow = (changePercent: number): string => {
-  if (changePercent > 8) return 'shadow-[0_0_15px_rgba(34,197,94,0.5)]';
-  if (changePercent > 5) return 'shadow-[0_0_12px_rgba(34,197,94,0.4)]';
-  if (changePercent > 2) return 'shadow-[0_0_10px_rgba(34,197,94,0.3)]';
-  if (changePercent > 0) return 'shadow-[0_0_8px_rgba(34,197,94,0.2)]';
-  if (changePercent > -2) return 'shadow-[0_0_8px_rgba(239,68,68,0.2)]';
-  if (changePercent > -5) return 'shadow-[0_0_10px_rgba(239,68,68,0.3)]';
-  if (changePercent > -8) return 'shadow-[0_0_12px_rgba(239,68,68,0.4)]';
-  return 'shadow-[0_0_15px_rgba(239,68,68,0.5)]';
+  if (changePercent > 8) return 'shadow-[0_0_12px_rgba(34,197,94,0.4)]';
+  if (changePercent > 5) return 'shadow-[0_0_10px_rgba(34,197,94,0.3)]';
+  if (changePercent > 2) return 'shadow-[0_0_8px_rgba(34,197,94,0.25)]';
+  if (changePercent > 0) return 'shadow-[0_0_6px_rgba(34,197,94,0.2)]';
+  if (changePercent > -2) return 'shadow-[0_0_6px_rgba(239,68,68,0.2)]';
+  if (changePercent > -5) return 'shadow-[0_0_8px_rgba(239,68,68,0.25)]';
+  if (changePercent > -8) return 'shadow-[0_0_10px_rgba(239,68,68,0.3)]';
+  return 'shadow-[0_0_12px_rgba(239,68,68,0.4)]';
 };

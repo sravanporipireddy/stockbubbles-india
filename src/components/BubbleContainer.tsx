@@ -41,7 +41,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const [maxMarketCap, setMaxMarketCap] = useState(1000000000);
   const [displayNodes, setDisplayNodes] = useState<{ id: string, stock: Stock | null, position: { x: number, y: number } }[]>([]);
   
-  // Increase bubble count for better coverage - MORE BUBBLES as requested
+  // Increase bubble count for better coverage
   const BUBBLE_COUNT = 300;
   
   const [containerDimensions, setContainerDimensions] = useState({
@@ -86,11 +86,10 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         const id = `placeholder-${index}`;
         const stock = createPlaceholderStock(id);
         
-        // Randomize size with better distribution
-        const size = 40 + Math.random() * 40;
+        // Smaller baseline size for better packing
+        const size = 30 + Math.random() * 20;
         
-        // Use a more hexagonal packing approach for better distribution
-        // This creates a honeycomb-like pattern similar to the reference image
+        // Use a grid-based initial positioning
         const cols = Math.ceil(Math.sqrt(BUBBLE_COUNT * containerDimensions.width / containerDimensions.height));
         const rows = Math.ceil(BUBBLE_COUNT / cols);
         
@@ -105,9 +104,9 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         const baseX = (containerDimensions.width / cols) * col + xOffset;
         const baseY = (containerDimensions.height / rows) * row;
         
-        // Add some randomness to positions to avoid a perfect grid
-        const randX = (Math.random() - 0.5) * containerDimensions.width / cols * 0.7;
-        const randY = (Math.random() - 0.5) * containerDimensions.height / rows * 0.7;
+        // Add some randomness to positions
+        const randX = (Math.random() - 0.5) * containerDimensions.width / cols * 0.5;
+        const randY = (Math.random() - 0.5) * containerDimensions.height / rows * 0.5;
         
         return {
           id,
@@ -122,22 +121,24 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       nodesRef.current = initialNodes;
       
       simulationRef.current = d3.forceSimulation<NodeDatum>(initialNodes)
-        .alpha(0.9)
-        .alphaDecay(0.008)  // Slower decay for better settling
-        .velocityDecay(0.25)  // Adjusted for more natural movement
-        .force('charge', d3.forceManyBody().strength(-15))  // Reduced repulsion
+        .alpha(0.8)
+        .alphaDecay(0.01)  // Slower decay for better settling
+        .velocityDecay(0.4)  // Higher value for more damping (less bouncy)
+        .force('charge', d3.forceManyBody().strength(-10))  // Reduced repulsion
         .force('collide', d3.forceCollide<NodeDatum>()
-          .radius(d => d.r + 1)  // Minimal padding for tighter packing
-          .strength(0.7)
-          .iterations(4))
-        .force('x', d3.forceX().x(d => Math.random() * containerDimensions.width).strength(0.02))
-        .force('y', d3.forceY().y(d => Math.random() * containerDimensions.height).strength(0.02))
+          .radius(d => (d.r || 10) + 5)  // Add padding to prevent overlap
+          .strength(1)  // Maximum strength to ensure no overlap
+          .iterations(5))  // More iterations for better collision detection
+        .force('x', d3.forceX().x(d => containerDimensions.width / 2).strength(0.05))
+        .force('y', d3.forceY().y(d => containerDimensions.height / 2).strength(0.05))
         .force('boundaryX', d3.forceX().x(d => {
-          return Math.max(d.r || 0, Math.min(containerDimensions.width - (d.r || 0), d.x || 0));
-        }).strength(0.1))
+          const r = d.r || 10;
+          return Math.max(r, Math.min(containerDimensions.width - r, d.x || 0));
+        }).strength(0.2))
         .force('boundaryY', d3.forceY().y(d => {
-          return Math.max(d.r || 0, Math.min(containerDimensions.height - (d.r || 0), d.y || 0));
-        }).strength(0.1));
+          const r = d.r || 10;
+          return Math.max(r, Math.min(containerDimensions.height - r, d.y || 0));
+        }).strength(0.2));
       
       simulationRef.current.on('tick', () => {
         const simulation = simulationRef.current;
@@ -146,7 +147,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         const newPositions = new Map<string, {x: number, y: number}>();
         
         simulation.nodes().forEach(node => {
-          const padding = node.r || 20;
+          const padding = (node.r || 10) + 2; // Add extra padding
           node.x = Math.max(padding, Math.min(containerDimensions.width - padding, node.x || 0));
           node.y = Math.max(padding, Math.min(containerDimensions.height - padding, node.y || 0));
           
@@ -165,7 +166,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       });
       
       // Run more initial ticks to help position bubbles
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 120; i++) {
         simulationRef.current.tick();
       }
     }
@@ -203,7 +204,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       }
     });
     
-    // Assign remaining stocks to placeholder nodes
+    // Assign remaining stocks to placeholder nodes with better spacing
     let placeholderIndex = 0;
     currentNodes.forEach(node => {
       if (node.stock?.isPlaceholder && stocksToAssign.length > 0) {
@@ -215,18 +216,19 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
         }
       } else if (node.stock?.isPlaceholder) {
         // Resize remaining placeholder nodes for visual variety
-        node.r = (20 + Math.random() * 15) / 2;
+        node.r = (15 + Math.random() * 10) / 2; // Smaller placeholders
       }
       placeholderIndex++;
     });
     
+    // Restart simulation with higher alpha to reposition nodes
     simulationRef.current
       .nodes(currentNodes)
-      .alpha(0.3)
+      .alpha(0.5)
       .restart();
     
     // Run a few more ticks to help reposition
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       simulationRef.current.tick();
     }
     

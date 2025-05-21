@@ -32,7 +32,7 @@ const StockBubble: React.FC<StockBubbleProps> = ({
   
   // Calculate bubble size based on market cap
   const bubbleSize = isPlaceholder 
-    ? 20 + Math.random() * 10 // Smaller placeholder bubbles
+    ? 15 + Math.random() * 8 // Smaller placeholder bubbles
     : getBubbleSize(stock.marketCap, maxMarketCap);
     
   // For placeholder bubbles, use a more subtle gradient
@@ -57,9 +57,9 @@ const StockBubble: React.FC<StockBubbleProps> = ({
         position: 'absolute',
         left: `${position.x - bubbleSize/2}px`,
         top: `${position.y - bubbleSize/2}px`,
-        transform: isHovering ? 'scale(1.08)' : 'scale(1)', 
+        transform: isHovering ? 'scale(1.05)' : 'scale(1)', // Reduced hover scale
         transition: 'left 0.5s ease, top 0.5s ease, transform 0.2s ease, opacity 0.3s ease',
-        opacity: isPlaceholder ? 0.3 : 1 // Lower opacity for placeholders to make real stocks stand out
+        opacity: isPlaceholder ? 0.2 : 1 // Lower opacity for placeholders
       }}
       onMouseEnter={() => !isPlaceholder && setIsHovering(true)}
       onMouseLeave={() => !isPlaceholder && setIsHovering(false)}
@@ -69,8 +69,8 @@ const StockBubble: React.FC<StockBubbleProps> = ({
         className={`absolute inset-0 rounded-full flex flex-col items-center justify-center overflow-hidden ${bubbleColor} p-2 ${glowEffect}`}
         style={{
           boxShadow: isPlaceholder ? 'none' : (isHovering 
-            ? '0 0 0 3px rgba(255,255,255,0.3), 0 8px 25px rgba(0,0,0,0.3)' 
-            : '0 4px 10px rgba(0,0,0,0.15)'),
+            ? '0 0 0 2px rgba(255,255,255,0.2), 0 4px 15px rgba(0,0,0,0.2)' 
+            : '0 2px 5px rgba(0,0,0,0.1)'),
           transition: 'box-shadow 0.2s ease',
         }}
       >
