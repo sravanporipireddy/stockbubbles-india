@@ -40,7 +40,8 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
   const [maxMarketCap, setMaxMarketCap] = useState(1000000000);
   const [displayNodes, setDisplayNodes] = useState<{ id: string, stock: Stock | null, position: { x: number, y: number } }[]>([]);
   
-  const BUBBLE_COUNT = 100;
+  // Increase bubble count for better coverage
+  const BUBBLE_COUNT = 200;
   
   const [containerDimensions, setContainerDimensions] = useState({
     width: 0,
@@ -79,40 +80,61 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     if (!simulationRef.current && containerDimensions.width > 0 && containerDimensions.height > 0) {
       console.log("Initializing simulation with dimensions:", containerDimensions);
       
+      // Create nodes that cover the entire area
       const initialNodes: NodeDatum[] = Array.from({ length: BUBBLE_COUNT }).map((_, index) => {
         const id = `placeholder-${index}`;
         const stock = createPlaceholderStock(id);
-        const size = 20 + Math.random() * 70;
+        
+        // Randomize size with better distribution
+        const size = 10 + Math.random() * 50;
+        
+        // Distribute nodes evenly across container
+        const gridSize = Math.ceil(Math.sqrt(BUBBLE_COUNT));
+        const cellWidth = containerDimensions.width / gridSize;
+        const cellHeight = containerDimensions.height / gridSize;
+        
+        const col = index % gridSize;
+        const row = Math.floor(index / gridSize);
+        
+        // Add slight randomness to grid positions
+        const xOffset = (Math.random() - 0.5) * cellWidth * 0.8;
+        const yOffset = (Math.random() - 0.5) * cellHeight * 0.8;
         
         return {
           id,
           index,
           r: size / 2,
           stock: stock,
-          x: Math.random() * containerDimensions.width,
-          y: Math.random() * containerDimensions.height
+          x: (col + 0.5) * cellWidth + xOffset,
+          y: (row + 0.5) * cellHeight + yOffset
         };
       });
       
       nodesRef.current = initialNodes;
       
       simulationRef.current = d3.forceSimulation<NodeDatum>(initialNodes)
-        .alpha(0.8)
-        .alphaDecay(0.02)
-        .velocityDecay(0.3)
-        .force('charge', d3.forceManyBody().strength(-30))
+        .alpha(0.9)
+        .alphaDecay(0.01)  // Slower decay for better settling
+        .velocityDecay(0.2)  // Lower decay for more movement
+        .force('charge', d3.forceManyBody().strength(-15))  // Reduced repulsion
         .force('collide', d3.forceCollide<NodeDatum>()
-          .radius(d => d.r + 5)
-          .strength(0.8)
-          .iterations(4))
-        .force('x', d3.forceX(containerDimensions.width / 2).strength(0.03))
-        .force('y', d3.forceY(containerDimensions.height / 2).strength(0.03))
+          .radius(d => d.r + 2)  // Smaller padding between bubbles
+          .strength(0.7)
+          .iterations(3))
+        .force('x', d3.forceX().x(d => {
+          // Spread nodes more evenly across x-axis
+          return Math.random() * containerDimensions.width;
+        }).strength(0.02))
+        .force('y', d3.forceY().y(d => {
+          // Spread nodes more evenly across y-axis
+          return Math.random() * containerDimensions.height;
+        }).strength(0.02))
         .force('boundaryX', d3.forceX().x(d => {
           return Math.max(d.r || 0, Math.min(containerDimensions.width - (d.r || 0), d.x || 0));
-        }).strength(0.2))
+        }).strength(0.1))
         .force('boundaryY', d3.forceY().y(d => {
           return Math.max(d.r || 0, Math.min(containerDimensions.height - (d.r || 0), d.y || 0));
-        }).strength(0.2));
+        }).strength(0.1));
       
       simulationRef.current.on('tick', () => {
         const simulation = simulationRef.current;
@@ -163,6 +185,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
     
     const stocksToAssign = [...stocks];
     
+    // Keep real stock data on nodes that already have it
     currentNodes.forEach(node => {
       if (!node.stock?.isPlaceholder) {
         const stockIndex = stocksToAssign.findIndex(s => s.id === node.stock?.id);
@@ -176,6 +199,7 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
       }
     });
     
+    // Assign remaining stocks to placeholder nodes
     let placeholderIndex = 0;
     currentNodes.forEach(node => {
       if (node.stock?.isPlaceholder && stocksToAssign.length > 0) {
@@ -185,8 +209,9 @@ const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick 
           node.id = stock.id;
           node.r = getBubbleSize(stock.marketCap, newMaxMarketCap) / 2;
         }
-      } else if (placeholderIndex >= BUBBLE_COUNT - stocks.length) {
-        node.r = 15 + Math.random() * 35;
+      } else if (node.stock?.isPlaceholder) {
+        // Resize remaining placeholder nodes for visual variety
+        node.r = (15 + Math.random() * 25) / 2;
       }
       placeholderIndex++;
     });
