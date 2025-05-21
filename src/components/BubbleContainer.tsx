@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Stock } from '@/lib/mockData';
 import { getMaxMarketCap, getBubbleSize } from '@/lib/visualUtils';
 import StockBubble from './StockBubble';
-import { motion } from 'framer-motion';
 import * as d3 from 'd3';
 
 interface BubbleContainerProps {
@@ -16,169 +15,236 @@ interface NodeDatum extends d3.SimulationNodeDatum {
   r: number;
   x?: number;
   y?: number;
-  stock: Stock;
+  stock: Stock | null;
 }
 
+const createPlaceholderStock = (id: string): Stock => ({
+  id,
+  symbol: '',
+  name: '',
+  price: 0,
+  previousPrice: 0,
+  change: 0,
+  changePercent: 0,
+  marketCap: Math.random() * 1000000000,
+  volume: 0,
+  sector: '',
+  isPlaceholder: true
+});
+
 const BubbleContainer: React.FC<BubbleContainerProps> = ({ stocks, onStockClick }) => {
-  const maxMarketCap = getMaxMarketCap(stocks);
-  const [nodes, setNodes] = useState<NodeDatum[]>([]);
-  const simulationRef = useRef<d3.Simulation<NodeDatum, undefined> | null>(null);
+  const [nodePositions, setNodePositions] = useState<Map<string, {x: number, y: number}>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
-  const [initialLayoutComplete, setInitialLayoutComplete] = useState(false);
-  const previousNodesRef = useRef<Map<string, NodeDatum>>(new Map());
+  const simulationRef = useRef<d3.Simulation<NodeDatum, undefined> | null>(null);
+  const nodesRef = useRef<NodeDatum[]>([]);
+  const [maxMarketCap, setMaxMarketCap] = useState(1000000000);
+  const [displayNodes, setDisplayNodes] = useState<{ id: string, stock: Stock | null, position: { x: number, y: number } }[]>([]);
+  
+  const BUBBLE_COUNT = 100;
   
   const [containerDimensions, setContainerDimensions] = useState({
-    width: Math.min(window.innerWidth * 0.9, 1200),
-    height: 800
+    width: 0,
+    height: 0
   });
   
-  // Handle window resize
   useEffect(() => {
-    const handleResize = () => {
+    const updateContainerSize = () => {
       if (containerRef.current) {
-        const { width } = containerRef.current.getBoundingClientRect();
+        const rect = containerRef.current.getBoundingClientRect();
         setContainerDimensions({
-          width,
-          height: 800
+          width: rect.width,
+          height: rect.height
         });
       }
     };
     
-    window.addEventListener('resize', handleResize);
-    handleResize();
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Save previous node positions when nodes are updated
-  useEffect(() => {
-    if (nodes.length > 0) {
-      const nodeMap = new Map<string, NodeDatum>();
-      nodes.forEach(node => {
-        nodeMap.set(node.id, node);
-      });
-      previousNodesRef.current = nodeMap;
-    }
-  }, [nodes]);
-
-  // Update nodes when stocks change
-  useEffect(() => {
-    // Skip if no stocks
-    if (stocks.length === 0) {
-      setNodes([]);
-      return;
-    }
-
-    // Always maintain existing positions for stocks that stay the same
-    const updatedNodes = stocks.map((stock, index) => {
-      const r = getBubbleSize(stock.marketCap, maxMarketCap) / 2;
-      const existingNode = previousNodesRef.current.get(stock.id);
-      
-      // If this stock existed before, maintain its position
-      if (existingNode && existingNode.x !== undefined && existingNode.y !== undefined) {
-        return {
-          ...existingNode,
-          stock,
-          r,
-          index
-        };
-      }
-      
-      // For new stocks, place them at the center with minimal randomness
-      return {
-        id: stock.id,
-        index,
-        r,
-        stock,
-        x: containerDimensions.width / 2 + (Math.random() - 0.5) * 20,
-        y: containerDimensions.height / 2 + (Math.random() - 0.5) * 20
-      };
-    });
+    updateContainerSize();
+    const resizeObserver = new ResizeObserver(updateContainerSize);
     
-    // If we don't have positions yet or simulation isn't complete
-    if (!initialLayoutComplete) {
-      runSimulation(updatedNodes);
-    } else {
-      setNodes(updatedNodes);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
     }
-  }, [stocks, maxMarketCap, containerDimensions, initialLayoutComplete]);
-
-  // Run the D3 simulation to compute bubble positions
-  const runSimulation = (nodesToSimulate: NodeDatum[]) => {
-    // Use a stronger collision force to ensure bubbles don't overlap
-    const simulation = d3.forceSimulation<NodeDatum>()
-      .nodes(nodesToSimulate)
-      .alpha(0.9) // Higher alpha for more energy
-      .alphaDecay(0.03) // Slower decay for better placement
-      .velocityDecay(0.4) // Add some friction
-      .force('center', d3.forceCenter(containerDimensions.width / 2, containerDimensions.height / 2))
-      .force('charge', d3.forceManyBody().strength(-20))
-      // Stronger collision detection with higher padding
-      .force('collide', d3.forceCollide<NodeDatum>()
-        .radius(d => d.r + 15) // Add extra padding
-        .strength(1) // Maximum strength
-        .iterations(5)) // More iterations for better accuracy
-      .force('x', d3.forceX(containerDimensions.width / 2).strength(0.07))
-      .force('y', d3.forceY(containerDimensions.height / 2).strength(0.07));
-
-    // Update nodes on each tick without animations
-    simulation.on('tick', () => {
-      // Ensure nodes stay within container bounds with extra padding for collision
-      simulation.nodes().forEach(node => {
-        // Padding to keep bubbles from touching the edge
-        const padding = 10;
-        node.x = Math.max(node.r + padding, Math.min(containerDimensions.width - node.r - padding, node.x || 0));
-        node.y = Math.max(node.r + padding, Math.min(containerDimensions.height - node.r - padding, node.y || 0));
-      });
-      
-      setNodes([...simulation.nodes()]);
-    });
-
-    // Store simulation reference
-    simulationRef.current = simulation;
     
-    // Stop simulation after a short time to finalize positions
-    const timer = setTimeout(() => {
-      if (simulationRef.current) {
-        simulationRef.current.stop();
-        console.log("info: Simulation stopped permanently - positions fixed");
-        setInitialLayoutComplete(true);
-      }
-    }, 2000);
+    window.addEventListener('resize', updateContainerSize);
     
     return () => {
-      clearTimeout(timer);
+      if (containerRef.current) {
+        resizeObserver.unobserve(containerRef.current);
+      }
+      window.removeEventListener('resize', updateContainerSize);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!simulationRef.current && containerDimensions.width > 0 && containerDimensions.height > 0) {
+      console.log("Initializing simulation with dimensions:", containerDimensions);
+      
+      const initialNodes: NodeDatum[] = Array.from({ length: BUBBLE_COUNT }).map((_, index) => {
+        const id = `placeholder-${index}`;
+        const stock = createPlaceholderStock(id);
+        const size = 20 + Math.random() * 70;
+        
+        return {
+          id,
+          index,
+          r: size / 2,
+          stock: stock,
+          x: Math.random() * containerDimensions.width,
+          y: Math.random() * containerDimensions.height
+        };
+      });
+      
+      nodesRef.current = initialNodes;
+      
+      simulationRef.current = d3.forceSimulation<NodeDatum>(initialNodes)
+        .alpha(0.8)
+        .alphaDecay(0.02)
+        .velocityDecay(0.3)
+        .force('charge', d3.forceManyBody().strength(-30))
+        .force('collide', d3.forceCollide<NodeDatum>()
+          .radius(d => d.r + 5)
+          .strength(0.8)
+          .iterations(4))
+        .force('x', d3.forceX(containerDimensions.width / 2).strength(0.03))
+        .force('y', d3.forceY(containerDimensions.height / 2).strength(0.03))
+        .force('boundaryX', d3.forceX().x(d => {
+          return Math.max(d.r || 0, Math.min(containerDimensions.width - (d.r || 0), d.x || 0));
+        }).strength(0.2))
+        .force('boundaryY', d3.forceY().y(d => {
+          return Math.max(d.r || 0, Math.min(containerDimensions.height - (d.r || 0), d.y || 0));
+        }).strength(0.2));
+      
+      simulationRef.current.on('tick', () => {
+        const simulation = simulationRef.current;
+        if (!simulation) return;
+        
+        const newPositions = new Map<string, {x: number, y: number}>();
+        
+        simulation.nodes().forEach(node => {
+          const padding = node.r || 20;
+          node.x = Math.max(padding, Math.min(containerDimensions.width - padding, node.x || 0));
+          node.y = Math.max(padding, Math.min(containerDimensions.height - padding, node.y || 0));
+          
+          newPositions.set(node.id, {x: node.x, y: node.y});
+        });
+        
+        setNodePositions(newPositions);
+        
+        const newDisplayNodes = simulation.nodes().map(node => ({
+          id: node.id,
+          stock: node.stock,
+          position: { x: node.x || 0, y: node.y || 0 }
+        }));
+        
+        setDisplayNodes(newDisplayNodes);
+      });
+      
+      for (let i = 0; i < 50; i++) {
+        simulationRef.current.tick();
+      }
+    }
+    
+    return () => {
       if (simulationRef.current) {
         simulationRef.current.stop();
       }
     };
-  };
+  }, [containerDimensions]);
+
+  useEffect(() => {
+    if (!simulationRef.current || stocks.length === 0) return;
+    
+    console.log("Updating bubbles with real stock data, count:", stocks.length);
+    
+    const currentNodes = simulationRef.current.nodes();
+    
+    const newMaxMarketCap = getMaxMarketCap(stocks);
+    setMaxMarketCap(newMaxMarketCap);
+    
+    const stocksToAssign = [...stocks];
+    
+    currentNodes.forEach(node => {
+      if (!node.stock?.isPlaceholder) {
+        const stockIndex = stocksToAssign.findIndex(s => s.id === node.stock?.id);
+        if (stockIndex !== -1) {
+          const stock = stocksToAssign[stockIndex];
+          node.stock = stock;
+          node.r = getBubbleSize(stock.marketCap, newMaxMarketCap) / 2;
+          
+          stocksToAssign.splice(stockIndex, 1);
+        }
+      }
+    });
+    
+    let placeholderIndex = 0;
+    currentNodes.forEach(node => {
+      if (node.stock?.isPlaceholder && stocksToAssign.length > 0) {
+        const stock = stocksToAssign.shift();
+        if (stock) {
+          node.stock = stock;
+          node.id = stock.id;
+          node.r = getBubbleSize(stock.marketCap, newMaxMarketCap) / 2;
+        }
+      } else if (placeholderIndex >= BUBBLE_COUNT - stocks.length) {
+        node.r = 15 + Math.random() * 35;
+      }
+      placeholderIndex++;
+    });
+    
+    simulationRef.current
+      .nodes(currentNodes)
+      .alpha(0.3)
+      .restart();
+    
+    for (let i = 0; i < 5; i++) {
+      simulationRef.current.tick();
+    }
+    
+    const newDisplayNodes = currentNodes.map(node => ({
+      id: node.id,
+      stock: node.stock,
+      position: { x: node.x || 0, y: node.y || 0 }
+    }));
+    
+    setDisplayNodes(newDisplayNodes);
+  }, [stocks]);
 
   return (
     <div 
       ref={containerRef}
-      className="relative h-[800px] max-w-6xl mx-auto z-30 mt-12 mb-16 border-transparent bubble-container"
+      className="relative w-full h-[calc(100vh-320px)] min-h-[400px] overflow-hidden bubble-container"
+      style={{
+        background: 'transparent',
+        border: '1px solid rgba(255,255,255,0.1)',
+        borderRadius: '8px',
+        padding: '8px'
+      }}
     >
-      {stocks.length === 0 ? (
-        <div className="text-center py-8">
-          <h3 className="text-lg font-medium">No stocks found</h3>
-          <p className="text-muted-foreground">Try adjusting your filters</p>
-        </div>
-      ) : (
-        <>
-          <div className="absolute inset-0 rounded-lg opacity-10 bg-gradient-to-br from-background to-primary/10" />
-          {nodes.map((node) => (
-            <StockBubble
-              key={node.id}
-              stock={node.stock}
-              maxMarketCap={maxMarketCap}
-              onClick={onStockClick}
-              index={node.index}
-              allStocks={stocks}
-              position={{ x: node.x || 0, y: node.y || 0 }}
-            />
-          ))}
-        </>
-      )}
+      <div className="absolute inset-0 z-0" />
+      <div className="debug-info absolute top-2 left-2 text-xs text-gray-400 z-50">
+        Dimensions: {containerDimensions.width}x{containerDimensions.height} | 
+        Bubbles: {displayNodes.length} | 
+        Real Stocks: {stocks.length}
+      </div>
+      
+      {displayNodes.map(node => {
+        if (!node.position || isNaN(node.position.x) || isNaN(node.position.y)) {
+          return null;
+        }
+        
+        return (
+          <StockBubble
+            key={node.id}
+            stock={node.stock}
+            isPlaceholder={node.stock?.isPlaceholder}
+            maxMarketCap={maxMarketCap}
+            onClick={onStockClick}
+            index={0}
+            allStocks={stocks}
+            position={node.position}
+          />
+        );
+      })}
     </div>
   );
 };
